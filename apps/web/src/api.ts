@@ -1,4 +1,4 @@
-import { AcxCheck, AnalysisJob, Chapter, Issue, Project, TranscriptionMode } from "./types"
+import { AcxCheck, AnalysisJob, AppSettings, Chapter, HealthStatus, Issue, Project, TranscriptionMode } from "./types"
 
 const API_BASE = import.meta.env.VITE_API_BASE ?? "http://localhost:8000"
 
@@ -26,6 +26,16 @@ export function getChapterAudioUrl(chapterId: number, revision?: string | number
 
 export function getExportUrl(chapterId: number, kind: "csv" | "json") {
   return `${API_BASE}/chapters/${chapterId}/exports/${kind}`
+}
+
+export function getHealth() {
+  return fetchJson<HealthStatus>("/health")
+}
+
+export function cancelJob(jobId: number) {
+  return fetchJson<{ ok: boolean; job_id: number; status: string }>(`/jobs/${jobId}/cancel`, {
+    method: "POST"
+  })
 }
 
 export function getProjects() {
@@ -100,6 +110,10 @@ export function uploadChapterAudioWithProgress(
       reject(new Error("Failed to upload chapter WAV."))
     }
 
+    xhr.onabort = () => {
+      reject(new Error("Upload was aborted."))
+    }
+
     xhr.onload = () => {
       if (xhr.status < 200 || xhr.status >= 300) {
         reject(new Error((xhr.response && xhr.response.detail) || `Upload failed: ${xhr.status}`))
@@ -141,11 +155,11 @@ export function getIssues(chapterId: number) {
   return fetchJson<Issue[]>(`/chapters/${chapterId}/issues`)
 }
 
-export function analyzeChapter(chapterId: number, transcriptionMode: TranscriptionMode) {
+export function analyzeChapter(chapterId: number, transcriptionMode: TranscriptionMode, forceRetranscribe: boolean = false, enableLlmTriage: boolean = true) {
   return fetchJson<{ job_id: number; status: string }>(`/chapters/${chapterId}/analyze`, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ transcription_mode: transcriptionMode })
+    body: JSON.stringify({ transcription_mode: transcriptionMode, force_retranscribe: forceRetranscribe, enable_llm_triage: enableLlmTriage })
   })
 }
 
@@ -216,7 +230,28 @@ export async function downloadEditedChapterAudio(chapterId: number) {
   window.setTimeout(() => URL.revokeObjectURL(url), 1000)
 }
 
-export function updateIssue(issueId: number, payload: Record<string, unknown>) {
+export function getSettings() {
+  return fetchJson<AppSettings>("/settings")
+}
+
+export function updateSettings(payload: {
+  openai_api_key?: string
+  anthropic_api_key?: string
+  llm_provider?: string
+  transcription_backend?: string
+}) {
+  return fetchJson<AppSettings>("/settings", {
+    method: "PATCH",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(payload)
+  })
+}
+
+export function getSpokenTokens(chapterId: number) {
+  return fetchJson<any[]>(`/chapters/${chapterId}/spoken-tokens`)
+}
+
+export function updateIssue(issueId: number, payload: Partial<Pick<Issue, "status" | "note" | "start_ms" | "end_ms">>) {
   return fetchJson<Issue>(`/issues/${issueId}`, {
     method: "PATCH",
     headers: { "Content-Type": "application/json" },

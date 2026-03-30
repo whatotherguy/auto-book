@@ -20,12 +20,14 @@ export function IssueTimeline({
   issues,
   selectedIssueId,
   durationMs,
-  onSelect
+  onSelect,
+  playheadMs = 0,
 }: {
   issues: Issue[]
   selectedIssueId: number | null
   durationMs: number
   onSelect: (issue: Issue) => void
+  playheadMs?: number
 }) {
   const safeDurationMs = Math.max(
     durationMs,
@@ -54,6 +56,12 @@ export function IssueTimeline({
 
         <div className="timeline-lane" role="list" aria-label="Issue timeline markers">
           <div className="timeline-waveform-backdrop" />
+          {playheadMs > 0 && safeDurationMs > 0 ? (
+            <div
+              className="timeline-playhead"
+              style={{ left: `${Math.min(100, (playheadMs / safeDurationMs) * 100)}%` }}
+            />
+          ) : null}
           {issues.map((issue) => {
             const startPercent = Math.max(0, Math.min(100, (issue.start_ms / safeDurationMs) * 100))
             const endPercent = Math.max(startPercent, Math.min(100, (issue.end_ms / safeDurationMs) * 100))

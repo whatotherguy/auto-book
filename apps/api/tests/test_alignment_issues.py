@@ -136,7 +136,7 @@ def test_build_issue_records_defaults_low_confidence_status_to_pending():
 
     issue = next(issue for issue in issue_records if issue["type"] == "pickup_restart")
     assert issue["chapter_id"] == 7
-    assert issue["status"] == "pending"
+    assert issue["status"] == "needs_manual"
     assert issue["confidence"] == 0.72
 
 
@@ -172,4 +172,4 @@ def test_persist_issue_models_uses_confidence_based_default_status():
         issues = session.exec(select(Issue).order_by(Issue.id)).all()
 
     assert issues[0].status == "approved"
-    assert issues[1].status == "pending"
+    assert issues[1].status == "needs_manual"

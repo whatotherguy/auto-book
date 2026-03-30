@@ -32,6 +32,7 @@ export default function App() {
     <ErrorBoundary>
       {chapterId ? (
         <ChapterReviewPage
+          key={chapterId}
           chapterId={chapterId}
           onBack={() => setChapterId(null)}
         />

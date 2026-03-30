@@ -1,18 +1,33 @@
-from datetime import datetime, timezone
-from threading import Thread
+from threading import Lock, Thread
 from pathlib import Path
 
 from sqlmodel import Session, select
 
 from .db import engine
-from .models import AnalysisJob, Chapter
+from .models import AnalysisJob, Chapter, utc_now
 from .services.export import build_auto_edit_export
 from .services.storage import ensure_chapter_dirs
 from .pipeline.analyze_chapter import run_analysis
 
+# Cooperative cancellation: set of job IDs that have been requested to cancel.
+# Workers check this periodically and abort if their job ID appears.
+_cancel_lock = Lock()
+_cancelled_jobs: set[int] = set()
 
-def utc_now():
-    return datetime.now(timezone.utc)
+
+def request_job_cancellation(job_id: int) -> None:
+    with _cancel_lock:
+        _cancelled_jobs.add(job_id)
+
+
+def is_job_cancelled(job_id: int) -> bool:
+    with _cancel_lock:
+        return job_id in _cancelled_jobs
+
+
+def _clear_cancellation(job_id: int) -> None:
+    with _cancel_lock:
+        _cancelled_jobs.discard(job_id)
 
 
 def set_job_progress(session: Session, job: AnalysisJob, progress: int, step: str) -> None:
@@ -40,9 +55,18 @@ def fail_analysis_job(
     session.commit()
 
 
-def run_analysis_job(session: Session, job_id: int, transcription_mode: str = "optimized") -> None:
+class JobCancelledError(Exception):
+    pass
+
+
+def run_analysis_job(session: Session, job_id: int, transcription_mode: str = "optimized", force_retranscribe: bool = False, enable_llm_triage: bool = True) -> None:
     job = session.get(AnalysisJob, job_id)
     if not job:
+        return
+
+    if is_job_cancelled(job_id):
+        fail_analysis_job(session, job, "Cancelled by user")
+        _clear_cancellation(job_id)
         return
 
     chapter = session.get(Chapter, job.chapter_id)
@@ -55,7 +79,13 @@ def run_analysis_job(session: Session, job_id: int, transcription_mode: str = "o
     session.commit()
 
     try:
-        run_analysis(session, chapter, job, transcription_mode=transcription_mode)
+        run_analysis(
+            session, chapter, job,
+            transcription_mode=transcription_mode,
+            force_retranscribe=force_retranscribe,
+            cancel_check=lambda: is_job_cancelled(job_id),
+            enable_llm_triage=enable_llm_triage,
+        )
         if job.status != "completed":
             fail_analysis_job(session, job, "Analysis ended without completing.", chapter)
             return
@@ -63,9 +93,12 @@ def run_analysis_job(session: Session, job_id: int, transcription_mode: str = "o
         job.finished_at = utc_now()
         session.add(job)
         session.commit()
+    except JobCancelledError:
+        fail_analysis_job(session, job, "Cancelled by user", chapter)
     except Exception as exc:
         fail_analysis_job(session, job, str(exc), chapter)
-        return
+    finally:
+        _clear_cancellation(job_id)
 
 
 def run_auto_edit_job(session: Session, job_id: int) -> None:
@@ -122,10 +155,10 @@ def run_auto_edit_job(session: Session, job_id: int) -> None:
         return
 
 
-def start_analysis_job(job_id: int, transcription_mode: str = "optimized") -> None:
+def start_analysis_job(job_id: int, transcription_mode: str = "optimized", force_retranscribe: bool = False, enable_llm_triage: bool = True) -> None:
     def worker() -> None:
         with Session(engine) as session:
-            run_analysis_job(session, job_id, transcription_mode=transcription_mode)
+            run_analysis_job(session, job_id, transcription_mode=transcription_mode, force_retranscribe=force_retranscribe, enable_llm_triage=enable_llm_triage)
 
     Thread(target=worker, daemon=True).start()
 
@@ -136,6 +169,20 @@ def start_auto_edit_job(job_id: int) -> None:
             run_auto_edit_job(session, job_id)
 
     Thread(target=worker, daemon=True).start()
+
+
+def recover_orphaned_jobs(session: Session) -> int:
+    orphaned = session.exec(
+        select(AnalysisJob).where(AnalysisJob.status.in_(["queued", "running"]))
+    ).all()
+    for job in orphaned:
+        job.status = "failed"
+        job.error_message = "Server restarted while job was in progress"
+        job.finished_at = utc_now()
+        session.add(job)
+    if orphaned:
+        session.commit()
+    return len(orphaned)
 
 
 def get_latest_job_for_chapter(session: Session, chapter_id: int, job_type: str | None = None) -> AnalysisJob | None:

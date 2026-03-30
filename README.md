@@ -64,6 +64,18 @@ npm run dev
 ## Environment
 Copy `.env.example` to `.env` in `apps/api` if needed.
 
+### GPU Transcription (Recommended)
+
+For dramatically faster transcription (45 min -> 3 min per hour of audio):
+
+```bash
+cd apps/api
+python setup_gpu.py
+```
+
+This installs PyTorch with CUDA support and downloads the large-v3 Whisper model.
+Requires an NVIDIA GPU with 4+ GB VRAM. The app auto-detects GPU on startup.
+
 ### Transcription tuning
 - `WHISPERX_PROFILE=balanced` is the practical default for long CPU transcription jobs.
 - Set `WHISPERX_PROFILE=high_quality` for slower, better decoding on difficult audio.

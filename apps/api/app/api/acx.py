@@ -9,30 +9,9 @@ from ..models import Chapter
 from ..services.acx import analyze_acx_audio
 from ..services.ingest import write_json_artifact
 from ..services.storage import ensure_chapter_dirs
+from .chapters import resolve_chapter_audio_path
 
 router = APIRouter(tags=["acx"])
-
-
-def resolve_chapter_audio_path(chapter: Chapter) -> Path | None:
-    if chapter.audio_file_path:
-        audio_path = Path(chapter.audio_file_path)
-        if audio_path.exists():
-            return audio_path
-
-    dirs = ensure_chapter_dirs(chapter.project_id, chapter.chapter_number)
-    source_wavs = sorted(
-        path for path in dirs["source"].iterdir() if path.is_file() and path.suffix.lower() == ".wav"
-    )
-    if source_wavs:
-        return source_wavs[0]
-
-    working_wavs = sorted(
-        path for path in dirs["working"].iterdir() if path.is_file() and path.suffix.lower() == ".wav"
-    )
-    if working_wavs:
-        return working_wavs[0]
-
-    return None
 
 
 @router.post("/chapters/{chapter_id}/acx-check")
@@ -70,6 +49,6 @@ def get_acx_check(chapter_id: int, session: Session = Depends(get_session)):
     dirs = ensure_chapter_dirs(chapter.project_id, chapter.chapter_number)
     report_path = dirs["analysis"] / "acx_report.json"
     if not report_path.exists():
-        return None
+        raise HTTPException(status_code=404, detail="ACX report not found")
 
     return json.loads(report_path.read_text(encoding="utf-8"))

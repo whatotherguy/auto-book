@@ -16,6 +16,9 @@ dependencies = [
 ]
 
 [project.optional-dependencies]
+gpu = [
+  "faster-whisper>=1.0",
+]
 dev = [
   "pytest>=8.0",
   "pytest-cov>=5.0",

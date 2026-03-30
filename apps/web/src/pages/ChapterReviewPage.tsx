@@ -1,9 +1,12 @@
 import { ChangeEvent, useEffect, useMemo, useRef, useState } from "react"
 import {
   analyzeChapter,
+  cancelJob,
   getAcxCheck,
+  getHealth,
   getLatestAnalysisJob,
   getJob,
+  getSettings,
   downloadChapterExport,
   downloadEditedChapterAudio,
   getChapter,
@@ -12,7 +15,8 @@ import {
   startAutoEditJob,
   runAcxCheck,
   updateIssue,
-  uploadChapterAudioWithProgress
+  uploadChapterAudioWithProgress,
+  getSpokenTokens
 } from "../api"
 import { AcxPanel } from "../components/AcxPanel"
 import { JobStatus } from "../components/JobStatus"
@@ -20,8 +24,11 @@ import { IssueDetail } from "../components/IssueDetail"
 import { IssueList } from "../components/IssueList"
 import { IssueTimeline } from "../components/IssueTimeline"
 import { ManuscriptPanel } from "../components/ManuscriptPanel"
+import { SettingsPanel } from "../components/SettingsPanel"
+import { Tooltip } from "../components/Tooltip"
+import { KeyboardShortcutOverlay } from "../components/KeyboardShortcutOverlay"
 import { WaveformPanel } from "../components/WaveformPanel"
-import { AcxCheck, AnalysisJob, Chapter, Issue, TranscriptionMode } from "../types"
+import { AcxCheck, AnalysisJob, AppSettings, Chapter, GpuInfo, Issue, IssueStatus, TranscriptionMode } from "../types"
 import { ConfidenceFilter, ISSUE_TYPE_META } from "../utils"
 
 export function ChapterReviewPage({
@@ -49,14 +56,30 @@ export function ChapterReviewPage({
   const [analysisJob, setAnalysisJob] = useState<AnalysisJob | null>(null)
   const [autoEditJob, setAutoEditJob] = useState<AnalysisJob | null>(null)
   const [uploadProgress, setUploadProgress] = useState<number | null>(null)
+  const [isBatchUpdating, setIsBatchUpdating] = useState(false)
   const [transcriptionMode, setTranscriptionMode] = useState<TranscriptionMode>("optimized")
+  const [forceRetranscribe, setForceRetranscribe] = useState(false)
+  const [gpuInfo, setGpuInfo] = useState<GpuInfo | null>(null)
+  const [appSettings, setAppSettings] = useState<AppSettings | null>(null)
+  const [enableLlmTriage, setEnableLlmTriage] = useState(true)
+  const [spokenTokens, setSpokenTokens] = useState<any[]>([])
+  const [playbackTimeMs, setPlaybackTimeMs] = useState(0)
   const replacementAudioInputRef = useRef<HTMLInputElement | null>(null)
   const autoEditDownloadTriggeredRef = useRef(false)
+  const issuesRef = useRef(issues)
+  const selectedIssueRef = useRef<Issue | null>(null)
 
   const selectedIssue = useMemo(
     () => issues.find((issue) => issue.id === selectedIssueId) ?? null,
     [issues, selectedIssueId]
   )
+
+  useEffect(() => {
+    void getHealth().then((h) => setGpuInfo(h.gpu)).catch(() => {})
+    void getSettings().then(setAppSettings).catch(() => {})
+  }, [])
+  useEffect(() => { issuesRef.current = issues }, [issues])
+  useEffect(() => { selectedIssueRef.current = selectedIssue }, [selectedIssue])
 
   async function loadChapter(options?: { showLoading?: boolean }) {
     const showLoading = options?.showLoading ?? true
@@ -74,6 +97,9 @@ export function ChapterReviewPage({
         getLatestAnalysisJob(chapterId, "analyze_chapter").catch(() => null),
         getLatestAnalysisJob(chapterId, "export_edited_wav").catch(() => null)
       ])
+      // After the main Promise.all, fetch spoken tokens for follow-along
+      getSpokenTokens(chapterId).then(setSpokenTokens).catch(() => setSpokenTokens([]))
+
       setChapter(nextChapter)
       setTranscriptionMode((currentMode) => {
         const nextMode = nextChapter.transcription_mode
@@ -157,7 +183,12 @@ export function ChapterReviewPage({
         setAutoEditJob(nextJob)
         if (nextJob.status === "completed" && !autoEditDownloadTriggeredRef.current) {
           autoEditDownloadTriggeredRef.current = true
-          await downloadEditedChapterAudio(chapterId)
+          try {
+            await downloadEditedChapterAudio(chapterId)
+          } catch {
+            autoEditDownloadTriggeredRef.current = false
+            return
+          }
           void loadChapter({ showLoading: false })
         }
       } catch {
@@ -176,7 +207,55 @@ export function ChapterReviewPage({
     }
   }, [autoEditJob?.id, autoEditJob?.status, chapterId])
 
+  useEffect(() => {
+    function handleKeyDown(event: KeyboardEvent) {
+      if (event.target instanceof HTMLInputElement || event.target instanceof HTMLTextAreaElement || event.target instanceof HTMLSelectElement) return
+
+      const currentIssues = issuesRef.current
+      const currentSelectedIssue = selectedIssueRef.current
+
+      if (event.key === "j" || event.key === "J") {
+        event.preventDefault()
+        setSelectedIssueId((current) => {
+          const currentIndex = currentIssues.findIndex((i) => i.id === current)
+          const nextIndex = currentIndex < currentIssues.length - 1 ? currentIndex + 1 : 0
+          return currentIssues[nextIndex]?.id ?? current
+        })
+      }
+      if (event.key === "k" || event.key === "K") {
+        event.preventDefault()
+        setSelectedIssueId((current) => {
+          const currentIndex = currentIssues.findIndex((i) => i.id === current)
+          const prevIndex = currentIndex > 0 ? currentIndex - 1 : currentIssues.length - 1
+          return currentIssues[prevIndex]?.id ?? current
+        })
+      }
+      if (event.key === "a" && !event.ctrlKey && !event.metaKey) {
+        if (currentSelectedIssue) void handleIssueStatusChange(currentSelectedIssue, "approved").catch(() => {})
+      }
+      if (event.key === "r" && !event.ctrlKey && !event.metaKey) {
+        if (currentSelectedIssue) void handleIssueStatusChange(currentSelectedIssue, "rejected").catch(() => {})
+      }
+      if (event.key === " ") {
+        event.preventDefault()
+        // Dispatch a custom event that WaveformPanel can listen to
+        window.dispatchEvent(new CustomEvent("waveform-toggle-play"))
+      }
+    }
+
+    window.addEventListener("keydown", handleKeyDown)
+    return () => window.removeEventListener("keydown", handleKeyDown)
+  }, [])
+
   const issueTypeOptions = useMemo(() => Object.entries(ISSUE_TYPE_META), [])
+
+  const issueTypeCounts = useMemo(() => {
+    const counts: Record<string, number> = {}
+    for (const issue of issues) {
+      counts[issue.type] = (counts[issue.type] ?? 0) + 1
+    }
+    return counts
+  }, [issues])
 
   function triggerReplacementUpload() {
     replacementAudioInputRef.current?.click()
@@ -208,12 +287,23 @@ export function ChapterReviewPage({
     try {
       setIsAnalyzing(true)
       setError(null)
-      const nextJob = await analyzeChapter(chapterId, transcriptionMode)
+      const nextJob = await analyzeChapter(chapterId, transcriptionMode, forceRetranscribe, enableLlmTriage)
       setAnalysisJob({ id: nextJob.job_id, chapter_id: chapterId, type: "analyze_chapter", status: nextJob.status, progress: 0 })
     } catch (nextError) {
       setError(nextError instanceof Error ? nextError.message : "Failed to analyze chapter.")
     } finally {
       setIsAnalyzing(false)
+    }
+  }
+
+  async function handleCancelJob(job: AnalysisJob | null, setJob: (j: AnalysisJob | null) => void) {
+    if (!job || (job.status !== "queued" && job.status !== "running")) return
+    try {
+      setError(null)
+      await cancelJob(job.id)
+      setJob({ ...job, status: "failed", error_message: "Cancelled by user" })
+    } catch (nextError) {
+      setError(nextError instanceof Error ? nextError.message : "Failed to cancel job.")
     }
   }
 
@@ -229,8 +319,11 @@ export function ChapterReviewPage({
     } catch (nextError) {
       setError(nextError instanceof Error ? nextError.message : `Failed to export ${kind.toUpperCase()}.`)
     } finally {
-      setIsExportingCsv(false)
-      setIsExportingJson(false)
+      if (kind === "csv") {
+        setIsExportingCsv(false)
+      } else {
+        setIsExportingJson(false)
+      }
     }
   }
 
@@ -267,7 +360,38 @@ export function ChapterReviewPage({
     }
   }
 
-  async function handleIssueStatusChange(issue: Issue, status: string) {
+  async function handleBatchStatusChange(status: IssueStatus, filter?: { type?: string; confidence?: ConfidenceFilter; search?: string }) {
+    const normalizedSearch = (filter?.search ?? "").trim().toLowerCase()
+    const targetIssues = issues.filter((issue) => {
+      if (issue.status === status) return false
+      if (filter?.type && filter.type !== "all" && issue.type !== filter.type) return false
+      if (filter?.confidence && filter.confidence !== "all") {
+        if (filter.confidence === "high" && issue.confidence < 0.85) return false
+        if (filter.confidence === "medium" && (issue.confidence < 0.65 || issue.confidence >= 0.85)) return false
+        if (filter.confidence === "low" && issue.confidence >= 0.65) return false
+      }
+      if (normalizedSearch && ![issue.spoken_text, issue.expected_text, issue.context_before, issue.context_after].some((v) => v.toLowerCase().includes(normalizedSearch))) return false
+      return true
+    })
+    if (targetIssues.length === 0) return
+    if (!window.confirm(`${status === "approved" ? "Approve" : status === "rejected" ? "Reject" : "Mark for review"} ${targetIssues.length} issues?`)) return
+
+    try {
+      setIsBatchUpdating(true)
+      setError(null)
+      const updated = await Promise.all(targetIssues.map((issue) => updateIssue(issue.id, { status })))
+      setIssues((current) => {
+        const updatedMap = new Map(updated.map((u) => [u.id, u]))
+        return current.map((issue) => updatedMap.get(issue.id) ?? issue)
+      })
+    } catch (nextError) {
+      setError(nextError instanceof Error ? nextError.message : "Failed to batch update issues.")
+    } finally {
+      setIsBatchUpdating(false)
+    }
+  }
+
+  async function handleIssueStatusChange(issue: Issue, status: IssueStatus) {
     try {
       setError(null)
       const updatedIssue = await updateIssue(issue.id, { status })
@@ -277,7 +401,6 @@ export function ChapterReviewPage({
       setSelectedIssueId(updatedIssue.id)
     } catch (nextError) {
       setError(nextError instanceof Error ? nextError.message : "Failed to update issue.")
-      throw nextError
     }
   }
 
@@ -300,7 +423,8 @@ export function ChapterReviewPage({
         </p>
         {chapter?.transcription_model ? (
           <p className="muted">
-            Last transcript used {chapter.transcription_mode ?? "optimized"} mode with {chapter.transcription_model}.
+            Last transcript: {chapter.transcription_mode ?? "optimized"} mode, {chapter.transcription_model} model
+            {chapter.transcription_profile ? ` (${chapter.transcription_profile} profile)` : ""}
           </p>
         ) : null}
         {loading ? <p className="muted">Loading chapter data...</p> : null}
@@ -313,83 +437,115 @@ export function ChapterReviewPage({
       ) : null}
 
       <div className="card review-toolbar">
-        <div className="review-toolbar-main">
+        <div className="review-filter-bar">
           <div className="review-toolbar-fields">
-            <label htmlFor="issue-search">Search issues</label>
+            <label htmlFor="issue-search">
+              Search
+              <Tooltip text="Filter the issue list by spoken text, expected manuscript text, or surrounding context."><span className="muted"> (?)</span></Tooltip>
+            </label>
             <input
               id="issue-search"
               type="search"
               value={searchQuery}
               onChange={(event) => setSearchQuery(event.target.value)}
-              placeholder="Search spoken text, expected text, or context"
+              placeholder="Search issues..."
             />
           </div>
 
           <div className="review-toolbar-fields">
-            <label htmlFor="issue-type-filter">Issue type</label>
+            <label htmlFor="issue-type-filter">
+              Type
+              <Tooltip text="Filter by detection category."><span className="muted"> (?)</span></Tooltip>
+            </label>
             <select id="issue-type-filter" value={typeFilter} onChange={(event) => setTypeFilter(event.target.value)}>
-              <option value="all">All types</option>
+              <option value="all">All types ({issues.length})</option>
               {issueTypeOptions.map(([type, meta]) => (
                 <option key={type} value={type}>
-                  {meta.label}
+                  {meta.label} ({issueTypeCounts[type] ?? 0})
                 </option>
               ))}
             </select>
           </div>
 
           <div className="review-toolbar-fields">
-            <label htmlFor="transcription-mode">Transcription mode</label>
-            <select
-              id="transcription-mode"
-              value={transcriptionMode}
-              onChange={(event) => setTranscriptionMode(event.target.value as TranscriptionMode)}
-              disabled={isAnalysisRunning}
-            >
-              <option value="optimized">Optimized</option>
-              <option value="high_quality">High Quality</option>
-              <option value="max_quality">Max Quality</option>
-            </select>
-          </div>
-
-          <div className="review-toolbar-fields">
-            <label htmlFor="confidence-filter">Confidence</label>
-            <select
-              id="confidence-filter"
-              value={confidenceFilter}
-              onChange={(event) => setConfidenceFilter(event.target.value as ConfidenceFilter)}
-            >
-              <option value="all">All confidence levels</option>
+            <label htmlFor="confidence-filter">
+              Confidence
+              <Tooltip text="High (≥85%) = likely real. Low (<65%) = may be artifact."><span className="muted"> (?)</span></Tooltip>
+            </label>
+            <select id="confidence-filter" value={confidenceFilter} onChange={(event) => setConfidenceFilter(event.target.value as ConfidenceFilter)}>
+              <option value="all">All levels</option>
               <option value="high">High</option>
               <option value="medium">Medium</option>
               <option value="low">Low</option>
             </select>
           </div>
+
+          <div className="review-toolbar-fields">
+            <label htmlFor="transcription-mode">
+              Transcription
+              <Tooltip text="Optimized is fastest. Max Quality uses the largest model."><span className="muted"> (?)</span></Tooltip>
+            </label>
+            <select id="transcription-mode" value={transcriptionMode} onChange={(event) => setTranscriptionMode(event.target.value as TranscriptionMode)} disabled={isAnalysisRunning}>
+              <option value="optimized">Optimized{gpuInfo?.available ? " (GPU)" : ""}</option>
+              <option value="high_quality">High Quality{gpuInfo?.available ? " (GPU)" : " (slow)"}</option>
+              <option value="max_quality">Max Quality{gpuInfo?.available ? " (GPU)" : " (very slow)"}</option>
+            </select>
+            {gpuInfo ? (
+              <span className="muted" style={{ fontSize: "0.72rem" }}>
+                {gpuInfo.available ? `GPU: ${gpuInfo.name}` : "CPU only"}
+              </span>
+            ) : null}
+          </div>
         </div>
 
-        <div className="review-toolbar-actions">
-          <input
-            ref={replacementAudioInputRef}
-            type="file"
-            accept=".wav,audio/wav"
-            onChange={handleReplacementAudioChange}
-            className="hidden-file-input"
-            aria-label="Replace chapter WAV"
-          />
-          <button type="button" onClick={triggerReplacementUpload} disabled={isReplacingAudio}>
-            {isReplacingAudio ? "Replacing..." : "Replace WAV"}
-          </button>
-          <button type="button" onClick={handleAnalyzeChapter} disabled={isAnalysisRunning || !canAnalyze}>
-            {isAnalysisRunning ? "Analyzing" : "Analyze Chapter"}
-          </button>
-          <button type="button" onClick={() => void handleExport("csv")} disabled={isExportingCsv}>
-            {isExportingCsv ? "Exporting CSV..." : "Export CSV"}
-          </button>
-          <button type="button" onClick={() => void handleExport("json")} disabled={isExportingJson}>
-            {isExportingJson ? "Exporting JSON..." : "Export JSON"}
-          </button>
-          <button type="button" onClick={handleAutoEdit} disabled={isAutoEditRunning || !hasAudio}>
-            {isAutoEditRunning ? "Exporting" : "Auto Edit"}
-          </button>
+        <div className="review-action-bar">
+          <div className="action-group">
+            <input ref={replacementAudioInputRef} type="file" accept=".wav,audio/wav" onChange={handleReplacementAudioChange} className="hidden-file-input" aria-label="Replace chapter WAV" />
+            <button type="button" onClick={triggerReplacementUpload} disabled={isReplacingAudio}>
+              {isReplacingAudio ? "Replacing..." : "Replace WAV"}
+            </button>
+            <button type="button" className="analyze-button" onClick={handleAnalyzeChapter} disabled={isAnalysisRunning || !canAnalyze}>
+              {isAnalysisRunning ? <><span className="progress-ring" />Analyzing...</> : "Analyze"}
+            </button>
+            {isAnalysisRunning ? (
+              <button type="button" className="danger-button" onClick={() => void handleCancelJob(analysisJob, setAnalysisJob)}>Cancel</button>
+            ) : null}
+          </div>
+
+          <div className="action-group">
+            <button type="button" onClick={() => void handleExport("csv")} disabled={isExportingCsv}>
+              {isExportingCsv ? "CSV..." : "CSV"}
+            </button>
+            <button type="button" onClick={() => void handleExport("json")} disabled={isExportingJson}>
+              {isExportingJson ? "JSON..." : "JSON"}
+            </button>
+            <button type="button" onClick={handleAutoEdit} disabled={isAutoEditRunning || !hasAudio}>
+              {isAutoEditRunning ? <><span className="progress-ring" />Exporting...</> : "Auto Edit"}
+            </button>
+            {isAutoEditRunning ? (
+              <button type="button" className="danger-button" onClick={() => void handleCancelJob(autoEditJob, setAutoEditJob)}>Cancel</button>
+            ) : null}
+          </div>
+
+          <div className="action-group">
+            <button type="button" onClick={() => void handleBatchStatusChange("approved", { type: typeFilter, confidence: confidenceFilter, search: searchQuery })} disabled={isBatchUpdating || issues.length === 0}>
+              {isBatchUpdating ? "..." : "Approve Filtered"}
+            </button>
+            <button type="button" onClick={() => void handleBatchStatusChange("rejected", { type: typeFilter, confidence: confidenceFilter, search: searchQuery })} disabled={isBatchUpdating || issues.length === 0}>
+              Reject Filtered
+            </button>
+          </div>
+
+          <div className="action-group">
+            <label className="toggle-row">
+              <input type="checkbox" checked={forceRetranscribe} onChange={(e) => setForceRetranscribe(e.target.checked)} disabled={isAnalysisRunning} />
+              <span>Re-transcribe</span>
+            </label>
+            <label className="toggle-row">
+              <input type="checkbox" checked={enableLlmTriage} onChange={(e) => setEnableLlmTriage(e.target.checked)} disabled={isAnalysisRunning || !appSettings?.triage_available} />
+              <span>AI triage{!appSettings?.triage_available ? " (no key)" : ""}</span>
+            </label>
+          </div>
         </div>
       </div>
 
@@ -398,17 +554,34 @@ export function ChapterReviewPage({
         selectedIssueId={selectedIssueId}
         durationMs={chapter?.duration_ms ?? 0}
         onSelect={(issue) => setSelectedIssueId(issue.id)}
+        playheadMs={playbackTimeMs}
       />
 
-      <div className="grid review-grid">
+      <WaveformPanel
+        audioUrl={chapter ? getChapterAudioUrl(chapter.id, chapter.analysis_artifact_updated_at) : null}
+        hasAudio={hasAudio}
+        focusStartMs={selectedIssue?.start_ms}
+        focusEndMs={selectedIssue?.end_ms}
+        issueType={selectedIssue?.type}
+        spokenTokens={spokenTokens}
+        onTimeUpdate={setPlaybackTimeMs}
+      />
+
+      {/* Two-column review grid */}
+      <div className="grid review-grid-2col">
         <div className="review-column">
-          <WaveformPanel
-            audioUrl={chapter ? getChapterAudioUrl(chapter.id, chapter.analysis_artifact_updated_at) : null}
-            hasAudio={hasAudio}
-            focusStartMs={selectedIssue?.start_ms}
-            focusEndMs={selectedIssue?.end_ms}
-            issueType={selectedIssue?.type}
+          <IssueList
+            issues={issues}
+            selectedIssueId={selectedIssueId}
+            onSelect={(issue) => setSelectedIssueId(issue.id)}
+            searchQuery={searchQuery}
+            typeFilter={typeFilter}
+            confidenceFilter={confidenceFilter}
           />
+        </div>
+
+        <div className="review-column">
+          <IssueDetail issue={selectedIssue} onStatusChange={handleIssueStatusChange} />
 
           <ManuscriptPanel text={chapter?.raw_text ?? ""} />
 
@@ -448,23 +621,11 @@ export function ChapterReviewPage({
             disabled={!hasAudio}
             isRunning={isRunningAcx}
           />
-        </div>
 
-        <div className="review-column">
-          <IssueList
-            issues={issues}
-            selectedIssueId={selectedIssueId}
-            onSelect={(issue) => setSelectedIssueId(issue.id)}
-            searchQuery={searchQuery}
-            typeFilter={typeFilter}
-            confidenceFilter={confidenceFilter}
-          />
-        </div>
-
-        <div className="review-column">
-          <IssueDetail issue={selectedIssue} onStatusChange={handleIssueStatusChange} />
+          <SettingsPanel settings={appSettings} onUpdate={setAppSettings} />
         </div>
       </div>
+      <KeyboardShortcutOverlay />
     </div>
   )
 }

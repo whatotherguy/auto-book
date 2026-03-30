@@ -34,7 +34,12 @@ export function ProjectPage({
     try {
       setError(null)
       setProject(await getProject(projectId))
-      setChapters(await getProjectChapters(projectId))
+      const loadedChapters = await getProjectChapters(projectId)
+      setChapters(loadedChapters)
+      if (loadedChapters.length > 0) {
+        const maxNumber = Math.max(...loadedChapters.map((c) => c.chapter_number))
+        setChapterNumber(maxNumber + 1)
+      }
     } catch (nextError) {
       setError(nextError instanceof Error ? nextError.message : "Failed to load chapters.")
     }

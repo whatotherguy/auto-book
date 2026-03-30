@@ -11,8 +11,10 @@ from .api.exports import router as exports_router
 from .api.issues import router as issues_router
 from .api.jobs import router as jobs_router
 from .api.projects import router as projects_router
+from .api.settings import router as settings_router
 from .config import settings
 from .db import init_db
+from .services.transcribe import detect_gpu
 
 logger = logging.getLogger(__name__)
 ffmpeg_available = False
@@ -60,6 +62,7 @@ app.include_router(acx_router)
 app.include_router(issues_router)
 app.include_router(exports_router)
 app.include_router(jobs_router)
+app.include_router(settings_router)
 
 def startup_health_checks():
     global ffmpeg_available, ffprobe_available
@@ -70,9 +73,15 @@ def startup_health_checks():
 
 @app.get("/health")
 def health():
+    gpu = detect_gpu()
     return {
         "ok": True,
         "app": settings.app_name,
         "ffmpeg_available": ffmpeg_available,
         "ffprobe_available": ffprobe_available,
+        "gpu": gpu,
+        "has_openai_key": bool(settings.openai_api_key),
+        "has_anthropic_key": bool(settings.anthropic_api_key),
+        "transcription_backend": settings.transcription_backend,
+        "llm_provider": settings.llm_provider,
     }

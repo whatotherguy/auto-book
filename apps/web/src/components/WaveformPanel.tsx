@@ -1,6 +1,15 @@
-import { useEffect, useRef, useState } from "react"
+import { useEffect, useMemo, useRef, useState } from "react"
 import WaveSurfer from "wavesurfer.js"
 import { CollapsibleSection } from "./CollapsibleSection"
+
+type SpokenToken = {
+  index: number
+  text: string
+  normalized: string
+  start_ms: number
+  end_ms: number
+  confidence: number
+}
 
 const PREVIEW_LEAD_MS = 1200
 const PREVIEW_TAIL_MS = 1800
@@ -10,13 +19,18 @@ export function WaveformPanel({
   hasAudio,
   focusStartMs,
   focusEndMs,
-  issueType
+  issueType,
+  onTimeUpdate,
+  onPlayStateChange
 }: {
   audioUrl: string | null | undefined
   hasAudio: boolean
   focusStartMs?: number | null
   focusEndMs?: number | null
   issueType?: string | null
+  onTimeUpdate?: (timeMs: number) => void
+  onPlayStateChange?: (playing: boolean) => void
+  spokenTokens?: SpokenToken[]
 }) {
   const containerRef = useRef<HTMLDivElement | null>(null)
   const waveSurferRef = useRef<WaveSurfer | null>(null)
@@ -29,6 +43,12 @@ export function WaveformPanel({
   const [durationSeconds, setDurationSeconds] = useState(0)
   const [waveformError, setWaveformError] = useState<string | null>(null)
   const [waveSurferReady, setWaveSurferReady] = useState(false)
+  const [waveformZoom, setWaveformZoom] = useState(1)
+  const [playbackRate, setPlaybackRate] = useState(1)
+  const onTimeUpdateRef = useRef(onTimeUpdate)
+  const onPlayStateChangeRef = useRef(onPlayStateChange)
+  useEffect(() => { onTimeUpdateRef.current = onTimeUpdate }, [onTimeUpdate])
+  useEffect(() => { onPlayStateChangeRef.current = onPlayStateChange }, [onPlayStateChange])
 
   useEffect(() => {
     focusStartRef.current = focusStartMs ?? null
@@ -72,6 +92,7 @@ export function WaveformPanel({
     const unsubscribeError = ws.on("error", handleWaveformError)
     const unsubscribeTimeupdate = ws.on("timeupdate", (currentTime) => {
       setPlaybackTime(currentTime)
+      onTimeUpdateRef.current?.(Math.round(currentTime * 1000))
 
       if (previewEndRef.current != null && currentTime >= previewEndRef.current) {
         ws.pause()
@@ -90,10 +111,21 @@ export function WaveformPanel({
       }
     })
 
+    const unsubscribePlay = ws.on("play", () => onPlayStateChangeRef.current?.(true))
+    const unsubscribePause = ws.on("pause", () => onPlayStateChangeRef.current?.(false))
+
+    function handleTogglePlay() {
+      ws.playPause()
+    }
+    window.addEventListener("waveform-toggle-play", handleTogglePlay)
+
     return () => {
       unsubscribeReady()
       unsubscribeError()
       unsubscribeTimeupdate()
+      unsubscribePlay()
+      unsubscribePause()
+      window.removeEventListener("waveform-toggle-play", handleTogglePlay)
       ws.destroy()
     }
   }, [])
@@ -113,6 +145,7 @@ export function WaveformPanel({
       return
     }
 
+    ws.empty()
     void ws.load(audioUrl).catch((error) => {
       setWaveformError(error instanceof Error ? error.message : String(error))
     })
@@ -120,11 +153,11 @@ export function WaveformPanel({
 
   useEffect(() => {
     const ws = waveSurferRef.current
-    if (!ws || focusStartMs == null) return
+    if (!ws || focusStartMs == null || durationSeconds <= 0) return
 
     previewEndRef.current = null
     ws.setTime(focusStartMs / 1000)
-  }, [focusStartMs])
+  }, [focusStartMs, durationSeconds])
 
   const issueStartSeconds = focusStartMs != null ? focusStartMs / 1000 : null
   const issueEndSeconds = focusEndMs != null ? focusEndMs / 1000 : null
@@ -170,7 +203,7 @@ export function WaveformPanel({
 
     previewEndRef.current = previewEndSeconds
     ws.setTime(previewStartSeconds)
-    ws.play()
+    void ws.play()
   }
 
   return (
@@ -187,6 +220,43 @@ export function WaveformPanel({
           </div>
         ) : null}
       </div>
+      <div className="waveform-zoom">
+        <label htmlFor="waveform-zoom">Gain</label>
+        <input
+          id="waveform-zoom"
+          type="range"
+          min={1}
+          max={8}
+          step={0.5}
+          value={waveformZoom}
+          onChange={(e) => {
+            const zoom = parseFloat(e.target.value)
+            setWaveformZoom(zoom)
+            waveSurferRef.current?.setOptions({ height: Math.round(120 * zoom) })
+          }}
+        />
+        <span className="muted">{waveformZoom}x</span>
+      </div>
+      <div className="playback-speed">
+        <label htmlFor="playback-rate">Speed</label>
+        <select
+          id="playback-rate"
+          value={playbackRate}
+          onChange={(e) => {
+            const rate = parseFloat(e.target.value)
+            setPlaybackRate(rate)
+            waveSurferRef.current?.setPlaybackRate(rate)
+          }}
+        >
+          <option value={0.5}>0.5x</option>
+          <option value={0.75}>0.75x</option>
+          <option value={1}>1x</option>
+          <option value={1.25}>1.25x</option>
+          <option value={1.5}>1.5x</option>
+          <option value={2}>2x</option>
+        </select>
+      </div>
+      <FollowAlongStrip tokens={spokenTokens ?? []} playbackTimeMs={Math.round(playbackTime * 1000)} isPlaying={waveSurferRef.current?.isPlaying() ?? false} />
       {focusStartMs != null ? (
         <div className="waveform-controls">
           <div className="waveform-summary">
@@ -248,5 +318,47 @@ export function WaveformPanel({
           : "Upload a WAV to populate the review waveform."}
       </p>
     </CollapsibleSection>
+  )
+}
+
+
+function FollowAlongStrip({ tokens, playbackTimeMs, isPlaying }: { tokens: SpokenToken[]; playbackTimeMs: number; isPlaying: boolean }) {
+  const scrollRef = useRef<HTMLDivElement>(null)
+  const activeRef = useRef<HTMLSpanElement>(null)
+
+  const activeIndex = useMemo(() => {
+    if (!tokens.length || playbackTimeMs <= 0) return -1
+    let lo = 0
+    let hi = tokens.length - 1
+    let best = -1
+    while (lo <= hi) {
+      const mid = (lo + hi) >> 1
+      const t = tokens[mid]
+      if (playbackTimeMs >= t.start_ms && playbackTimeMs <= t.end_ms) return mid
+      if (playbackTimeMs < t.start_ms) { hi = mid - 1 } else { best = mid; lo = mid + 1 }
+    }
+    return best
+  }, [tokens, playbackTimeMs])
+
+  useEffect(() => {
+    if (activeRef.current) {
+      activeRef.current.scrollIntoView({ behavior: isPlaying ? "smooth" : "auto", block: "nearest", inline: "center" })
+    }
+  }, [activeIndex, isPlaying])
+
+  if (!tokens.length) return null
+
+  return (
+    <div className="follow-along-strip" ref={scrollRef}>
+      {tokens.map((token, i) => (
+        <span
+          key={i}
+          ref={i === activeIndex ? activeRef : undefined}
+          className={`fa-word${i === activeIndex ? " active" : ""}${i < activeIndex ? " past" : ""}${token.confidence < 0.5 ? " low-conf" : ""}`}
+        >
+          {token.text}{" "}
+        </span>
+      ))}
+    </div>
   )
 }

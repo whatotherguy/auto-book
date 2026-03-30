@@ -83,6 +83,6 @@ def read_wav_duration_ms(audio_path: Path | None) -> int | None:
         return duration_ms
 
     if frame_rate <= 0:
-        return None
+        raise ValueError("Invalid WAV file: frame rate is zero or negative")
 
     return int((frame_count / frame_rate) * 1000)

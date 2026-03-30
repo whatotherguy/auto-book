@@ -13,12 +13,12 @@ class Project(SQLModel, table=True):
     id: Optional[int] = Field(default=None, primary_key=True)
     name: str
     created_at: datetime = Field(default_factory=utc_now)
-    updated_at: datetime = Field(default_factory=utc_now)
+    updated_at: datetime = Field(default_factory=utc_now, sa_column_kwargs={"onupdate": utc_now})
 
 
 class Chapter(SQLModel, table=True):
     id: Optional[int] = Field(default=None, primary_key=True)
-    project_id: int = Field(index=True)
+    project_id: int = Field(foreign_key="project.id", index=True)
     chapter_number: int
     title: Optional[str] = None
     raw_text: str = ""
@@ -28,12 +28,12 @@ class Chapter(SQLModel, table=True):
     duration_ms: Optional[int] = None
     status: str = "new"
     created_at: datetime = Field(default_factory=utc_now)
-    updated_at: datetime = Field(default_factory=utc_now)
+    updated_at: datetime = Field(default_factory=utc_now, sa_column_kwargs={"onupdate": utc_now})
 
 
 class AnalysisJob(SQLModel, table=True):
     id: Optional[int] = Field(default=None, primary_key=True)
-    chapter_id: int = Field(index=True)
+    chapter_id: int = Field(foreign_key="chapter.id", index=True)
     type: str = "analyze_chapter"
     status: str = "queued"
     progress: int = 0
@@ -46,7 +46,7 @@ class AnalysisJob(SQLModel, table=True):
 
 class Issue(SQLModel, table=True):
     id: Optional[int] = Field(default=None, primary_key=True)
-    chapter_id: int = Field(index=True)
+    chapter_id: int = Field(foreign_key="chapter.id", index=True)
     type: str
     start_ms: int
     end_ms: int
@@ -57,5 +57,7 @@ class Issue(SQLModel, table=True):
     context_after: str = ""
     note: Optional[str] = None
     status: str = "approved"
+    triage_verdict: Optional[str] = None    # "keep", "dismiss", "uncertain", or None
+    triage_reason: Optional[str] = None     # LLM explanation
     created_at: datetime = Field(default_factory=utc_now)
-    updated_at: datetime = Field(default_factory=utc_now)
+    updated_at: datetime = Field(default_factory=utc_now, sa_column_kwargs={"onupdate": utc_now})

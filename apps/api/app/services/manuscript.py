@@ -125,14 +125,17 @@ def join_page_lines(lines: list[dict]) -> str:
 
 def extract_text_from_pdf_bytes(pdf_bytes: bytes) -> tuple[str, int]:
     document = fitz.open(stream=pdf_bytes, filetype="pdf")
-    page_texts: list[str] = []
+    try:
+        page_texts: list[str] = []
 
-    for page in document:
-        page_text = join_page_lines(build_page_lines(page))
-        if page_text:
-            page_texts.append(page_text)
+        for page in document:
+            page_text = join_page_lines(build_page_lines(page))
+            if page_text:
+                page_texts.append(page_text)
 
-    return "\n\n".join(page_texts).strip(), len(document)
+        return "\n\n".join(page_texts).strip(), len(document)
+    finally:
+        document.close()
 
 
 def extract_text_from_manuscript_file(filename: str, file_bytes: bytes) -> tuple[str, dict]:

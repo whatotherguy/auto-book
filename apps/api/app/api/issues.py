@@ -2,7 +2,7 @@ from fastapi import APIRouter, Depends, HTTPException
 from sqlmodel import Session, select
 
 from ..db import get_session
-from ..models import Chapter, Issue
+from ..models import Chapter, Issue, utc_now
 from ..schemas import IssueUpdate
 
 router = APIRouter(tags=["issues"])
@@ -45,6 +45,10 @@ def update_issue(issue_id: int, payload: IssueUpdate, session: Session = Depends
     if payload.end_ms is not None:
         issue.end_ms = payload.end_ms
 
+    if issue.start_ms >= issue.end_ms:
+        raise HTTPException(status_code=422, detail="start_ms must be less than end_ms")
+
+    issue.updated_at = utc_now()
     session.add(issue)
     session.commit()
     session.refresh(issue)

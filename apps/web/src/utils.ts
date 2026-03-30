@@ -1,4 +1,5 @@
 export function formatTimecode(ms: number): string {
+  if (!Number.isFinite(ms) || ms < 0) ms = 0
   const totalSeconds = Math.floor(ms / 1000)
   const millis = ms % 1000
   const seconds = totalSeconds % 60

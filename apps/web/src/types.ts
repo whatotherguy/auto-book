@@ -23,6 +23,8 @@ export type Chapter = {
   analysis_artifact_updated_at?: number | null
 }
 
+export type IssueStatus = "approved" | "rejected" | "needs_manual"
+
 export type Issue = {
   id: number
   chapter_id: number
@@ -35,7 +37,9 @@ export type Issue = {
   context_before: string
   context_after: string
   note?: string | null
-  status: string
+  status: IssueStatus
+  triage_verdict?: string | null
+  triage_reason?: string | null
 }
 
 export type AnalysisJob = {
@@ -49,6 +53,37 @@ export type AnalysisJob = {
 }
 
 export type TranscriptionMode = "optimized" | "high_quality" | "max_quality"
+
+export type GpuInfo = {
+  available: boolean
+  device: string
+  compute_type: string
+  name: string | null
+  vram_gb: number | null
+}
+
+export type HealthStatus = {
+  ok: boolean
+  app: string
+  ffmpeg_available: boolean
+  ffprobe_available: boolean
+  gpu: GpuInfo
+  has_openai_key: boolean
+  has_anthropic_key: boolean
+  transcription_backend: string
+  llm_provider: string
+}
+
+export type AppSettings = {
+  transcription_backend: string
+  llm_provider: string
+  has_openai_key: boolean
+  has_anthropic_key: boolean
+  gpu_available: boolean
+  gpu_name: string | null
+  whisper_api_available: boolean
+  triage_available: boolean
+}
 
 export type AcxCheck = {
   measured_at: string

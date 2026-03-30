@@ -134,6 +134,37 @@ def estimate_noise_floor_dbfs(mono_samples: np.ndarray, sample_rate_hz: int) -> 
     )
 
 
+def compute_spoken_rms_dbfs(mono_samples: np.ndarray, sample_rate_hz: int) -> float | None:
+    """Compute RMS over spoken content only, excluding silent windows.
+
+    Uses a gate: computes RMS in 50 ms windows and only includes windows
+    where the RMS exceeds -40 dBFS in the final RMS calculation.
+    """
+    if mono_samples.size == 0 or sample_rate_hz <= 0:
+        return None
+
+    window_size = max(int(sample_rate_hz * 0.05), 1)
+    window_count = mono_samples.size // window_size
+    if window_count == 0:
+        return None
+
+    trimmed = mono_samples[: window_count * window_size]
+    windows = trimmed.reshape(window_count, window_size)
+    window_rms = np.sqrt(np.mean(np.square(windows), axis=1))
+
+    # Gate: only keep windows where RMS > -40 dBFS
+    gate_threshold = 10 ** (-40.0 / 20.0)  # ~0.01
+    spoken_mask = window_rms > gate_threshold
+
+    if not np.any(spoken_mask):
+        return None
+
+    # Combine spoken windows and compute overall RMS
+    spoken_windows = windows[spoken_mask]
+    spoken_rms = float(np.sqrt(np.mean(np.square(spoken_windows))))
+    return dbfs(spoken_rms)
+
+
 def add_check(
     checks: list[dict[str, Any]],
     suggestions: list[str],
@@ -159,6 +190,34 @@ def add_check(
         suggestions.append(suggestion)
 
 
+def _measure_silence_duration(mono_samples: np.ndarray, sample_rate_hz: int, from_end: bool = False) -> float:
+    """Measure seconds of audio below -40 dBFS at start or end of the file."""
+    if mono_samples.size == 0 or sample_rate_hz <= 0:
+        return 0.0
+
+    window_size = max(int(sample_rate_hz * 0.05), 1)  # 50 ms windows
+    window_count = mono_samples.size // window_size
+    if window_count == 0:
+        return 0.0
+
+    trimmed = mono_samples[: window_count * window_size]
+    windows = trimmed.reshape(window_count, window_size)
+    window_rms = np.sqrt(np.mean(np.square(windows), axis=1))
+    gate_threshold = 10 ** (-40.0 / 20.0)
+
+    if from_end:
+        window_rms = window_rms[::-1]
+
+    silent_count = 0
+    for rms_val in window_rms:
+        if rms_val <= gate_threshold:
+            silent_count += 1
+        else:
+            break
+
+    return silent_count * (window_size / sample_rate_hz)
+
+
 def analyze_acx_audio(audio_path: Path) -> dict[str, Any]:
     if not audio_path.exists():
         raise FileNotFoundError("Audio file not found")
@@ -175,6 +234,25 @@ def analyze_acx_audio(audio_path: Path) -> dict[str, Any]:
     rms_dbfs = dbfs(rms_value)
     noise_floor_dbfs, noise_floor_note = estimate_noise_floor_dbfs(mono_samples, audio["sample_rate_hz"])
     clipped_sample_count = int(np.sum(np.abs(samples) >= 0.999))
+    near_clipped_sample_count = int(np.sum(np.abs(samples) >= 0.99))
+
+    # DC offset measurement
+    dc_offset = float(np.mean(mono_samples)) if mono_samples.size else 0.0
+
+    # Spoken-content RMS
+    spoken_rms = compute_spoken_rms_dbfs(mono_samples, audio["sample_rate_hz"])
+
+    # Inter-sample peak estimation (2x oversampled via linear interpolation)
+    if mono_samples.size >= 2:
+        interpolated = (mono_samples[:-1] + mono_samples[1:]) / 2.0
+        isp_peak = float(np.max(np.abs(np.concatenate([mono_samples, interpolated]))))
+    else:
+        isp_peak = float(np.max(np.abs(mono_samples))) if mono_samples.size else 0.0
+    isp_exceeds = isp_peak >= 1.0 and peak_value < 1.0
+
+    # Silence head/tail measurement
+    head_silence_sec = _measure_silence_duration(mono_samples, audio["sample_rate_hz"], from_end=False)
+    tail_silence_sec = _measure_silence_duration(mono_samples, audio["sample_rate_hz"], from_end=True)
 
     checks: list[dict[str, Any]] = []
     suggestions: list[str] = []
@@ -286,14 +364,162 @@ def analyze_acx_audio(audio_path: Path) -> dict[str, Any]:
         summary="This source file is suitable for editing; final ACX delivery format is checked after mastering.",
     )
 
-    checks.append(
-        {
-            "check": "cross_chapter_consistency",
-            "passed": None,
-            "value": None,
-            "threshold": "<=20dB variation across all chapters",
-            "note": "Cross-chapter consistency requires comparing all chapters. Review manually before ACX submission.",
-        }
+    # --- New checks ---
+
+    # 1. DC offset check
+    dc_status = "warn" if abs(dc_offset) > 0.001 else "pass"
+    add_check(
+        checks,
+        suggestions,
+        name="dc_offset",
+        status=dc_status,
+        actual=f"{dc_offset:.6f}",
+        target="< 0.001 absolute offset",
+        summary="DC offset measures a constant bias in the waveform that wastes headroom.",
+        suggestion="Apply a high-pass filter or DC offset removal to correct the bias." if dc_status == "warn" else None,
+    )
+
+    # 2. Stereo channel balance
+    if audio["channels"] >= 2:
+        left_rms = float(np.sqrt(np.mean(np.square(samples[:, 0])))) if samples.shape[0] else 0.0
+        right_rms = float(np.sqrt(np.mean(np.square(samples[:, 1])))) if samples.shape[0] else 0.0
+        left_db = dbfs(left_rms)
+        right_db = dbfs(right_rms)
+        balance_diff = abs(left_db - right_db)
+        if balance_diff > 6.0:
+            balance_status = "fail"
+        elif balance_diff > 3.0:
+            balance_status = "warn"
+        else:
+            balance_status = "pass"
+        add_check(
+            checks,
+            suggestions,
+            name="stereo_balance",
+            status=balance_status,
+            actual=f"{balance_diff:.2f} dB difference (L={left_db} dBFS, R={right_db} dBFS)",
+            target="< 3 dB difference between channels",
+            summary="Stereo channel balance check for consistent left/right levels.",
+            suggestion=(
+                "Correct stereo imbalance; channels differ by more than 6 dB which may indicate a recording issue."
+                if balance_status == "fail"
+                else "Stereo channels differ by more than 3 dB; review panning and mic placement."
+                if balance_status == "warn"
+                else None
+            ),
+        )
+    else:
+        add_check(
+            checks,
+            suggestions,
+            name="stereo_balance",
+            status="info",
+            actual="Mono file",
+            target="< 3 dB difference between channels",
+            summary="Mono file — no balance check needed.",
+        )
+
+    # 3. Inter-sample peak estimation
+    isp_dbfs = dbfs(isp_peak)
+    if isp_exceeds:
+        isp_status = "warn"
+    else:
+        isp_status = "pass"
+    add_check(
+        checks,
+        suggestions,
+        name="inter_sample_peaks",
+        status=isp_status,
+        actual=f"{isp_dbfs} dBFS (interpolated peak)",
+        target="< 0 dBFS inter-sample peak",
+        summary="Estimates true peak between samples using 2x linear interpolation.",
+        suggestion=(
+            "Inter-sample peaks exceed 0 dBFS; use a true-peak limiter to prevent clipping on playback."
+            if isp_status == "warn"
+            else None
+        ),
+    )
+
+    # 4. Spoken-content RMS check
+    if spoken_rms is not None:
+        spoken_rms_status = "pass" if -23.0 <= spoken_rms <= -18.0 else "fail"
+        add_check(
+            checks,
+            suggestions,
+            name="spoken_rms_level",
+            status=spoken_rms_status,
+            actual=f"{spoken_rms} dBFS",
+            target="-23.0 to -18.0 dBFS",
+            summary="RMS of spoken content only (excluding silent windows below -40 dBFS).",
+            suggestion=(
+                "Adjust gain so spoken content lands between -23 and -18 dBFS RMS after gating out silence."
+                if spoken_rms_status == "fail"
+                else None
+            ),
+        )
+    else:
+        add_check(
+            checks,
+            suggestions,
+            name="spoken_rms_level",
+            status="warn",
+            actual="unavailable",
+            target="-23.0 to -18.0 dBFS",
+            summary="Could not compute spoken-content RMS; audio may be too short or entirely silent.",
+            suggestion="Check the audio file manually; spoken-content RMS could not be measured.",
+        )
+
+    # 5. Silence head/tail room tone checks
+    head_silence_rounded = round(head_silence_sec, 2)
+    if 0.5 <= head_silence_sec <= 5.0:
+        head_status = "pass"
+    else:
+        head_status = "warn"
+    add_check(
+        checks,
+        suggestions,
+        name="head_room_tone",
+        status=head_status,
+        actual=f"{head_silence_rounded} seconds",
+        target="0.5 to 5.0 seconds of room tone at start",
+        summary="ACX requires 0.5-5 seconds of room tone at the beginning of each chapter.",
+        suggestion=(
+            f"Adjust leading room tone to 0.5-5 seconds; currently {head_silence_rounded}s."
+            if head_status == "warn"
+            else None
+        ),
+    )
+
+    tail_silence_rounded = round(tail_silence_sec, 2)
+    if 1.0 <= tail_silence_sec <= 5.0:
+        tail_status = "pass"
+    else:
+        tail_status = "warn"
+    add_check(
+        checks,
+        suggestions,
+        name="tail_room_tone",
+        status=tail_status,
+        actual=f"{tail_silence_rounded} seconds",
+        target="1.0 to 5.0 seconds of room tone at end",
+        summary="ACX requires 1-5 seconds of room tone at the end of each chapter.",
+        suggestion=(
+            f"Adjust trailing room tone to 1-5 seconds; currently {tail_silence_rounded}s."
+            if tail_status == "warn"
+            else None
+        ),
+    )
+
+    # --- End new checks ---
+
+    add_check(
+        checks,
+        suggestions,
+        name="cross_chapter_consistency",
+        status="info",
+        actual="N/A",
+        target="<=20dB variation across all chapters",
+        summary="Cross-chapter consistency requires comparing all chapters. Review manually before ACX submission.",
     )
 
     unique_suggestions = list(dict.fromkeys(suggestions))
@@ -313,9 +539,11 @@ def analyze_acx_audio(audio_path: Path) -> dict[str, Any]:
         "levels": {
             "peak_dbfs": peak_dbfs,
             "rms_dbfs": rms_dbfs,
+            "spoken_rms_dbfs": spoken_rms,
             "estimated_noise_floor_dbfs": noise_floor_dbfs,
             "noise_floor_note": noise_floor_note,
             "clipped_sample_count": clipped_sample_count,
+            "near_clipped_sample_count": near_clipped_sample_count,
         },
         "checks": checks,
         "fix_suggestions": unique_suggestions,

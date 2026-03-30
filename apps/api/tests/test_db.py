@@ -35,9 +35,12 @@ def test_init_db_skips_create_all_when_alembic_version_exists(monkeypatch):
     monkeypatch.setattr(SQLModel.metadata, "create_all", lambda _engine: calls.append("create_all"))
     monkeypatch.setattr(db_module, "migrate_issue_status_defaults", lambda _session: calls.append("migrate"))
 
+    from app import jobs as jobs_module
+    monkeypatch.setattr(jobs_module, "recover_orphaned_jobs", lambda _session: calls.append("recover"))
+
     init_db()
 
-    assert calls == ["migrate"]
+    assert calls == ["migrate", "recover"]
 
 
 def test_init_db_creates_schema_when_alembic_version_missing(monkeypatch):
@@ -53,6 +56,9 @@ def test_init_db_creates_schema_when_alembic_version_missing(monkeypatch):
     monkeypatch.setattr(SQLModel.metadata, "create_all", lambda _engine: calls.append("create_all"))
     monkeypatch.setattr(db_module, "migrate_issue_status_defaults", lambda _session: calls.append("migrate"))
 
+    from app import jobs as jobs_module
+    monkeypatch.setattr(jobs_module, "recover_orphaned_jobs", lambda _session: calls.append("recover"))
+
     init_db()
 
-    assert calls == ["create_all", "migrate"]
+    assert calls == ["create_all", "migrate", "recover"]

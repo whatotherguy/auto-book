@@ -1,10 +1,22 @@
-from sqlalchemy import inspect
+from sqlalchemy import event, inspect
 from sqlmodel import SQLModel, Session, create_engine, select
 
 from .config import settings
 from .models import Issue, utc_now
 
-engine = create_engine(settings.database_url, echo=False)
+engine = create_engine(
+    settings.database_url,
+    echo=False,
+    connect_args={"check_same_thread": False},
+)
+
+
+@event.listens_for(engine, "connect")
+def _set_sqlite_pragma(dbapi_connection, connection_record):
+    cursor = dbapi_connection.cursor()
+    cursor.execute("PRAGMA journal_mode=WAL")
+    cursor.execute("PRAGMA foreign_keys=ON")
+    cursor.close()
 
 
 def migrate_issue_status_defaults(session: Session) -> None:
@@ -27,6 +39,8 @@ def init_db() -> None:
         SQLModel.metadata.create_all(engine)
     with Session(engine) as session:
         migrate_issue_status_defaults(session)
+        from .jobs import recover_orphaned_jobs
+        recover_orphaned_jobs(session)
 
 
 def get_session():

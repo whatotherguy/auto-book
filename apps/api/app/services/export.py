@@ -12,6 +12,7 @@ from ..models import Chapter, Issue
 from .audio import probe_audio_metadata, read_wav_duration_ms
 
 LONG_PAUSE_TARGET_MS = 300
+MIN_KEEP_SEGMENT_MS = 100
 CUTTABLE_ISSUE_TYPES = {
     "false_start",
     "repetition",
@@ -76,11 +77,11 @@ def build_cut_plan(issues: Iterable[Issue], duration_ms: int) -> list[tuple[int,
 
 
 def resolve_duration_ms(chapter: Chapter, source_audio_path: Path, issues: Sequence[Issue]) -> int:
-    if chapter.duration_ms:
+    if chapter.duration_ms is not None and chapter.duration_ms > 0:
         return chapter.duration_ms
 
     source_duration_ms = read_wav_duration_ms(source_audio_path)
-    if source_duration_ms:
+    if source_duration_ms is not None and source_duration_ms > 0:
         return source_duration_ms
 
     issue_end_ms = max((max(0, int(getattr(issue, "end_ms", 0))) for issue in issues), default=0)
@@ -89,10 +90,15 @@ def resolve_duration_ms(chapter: Chapter, source_audio_path: Path, issues: Seque
 
 def trim_long_pause(start_ms: int, end_ms: int) -> tuple[int, int]:
     duration_ms = max(0, end_ms - start_ms)
-    trim_ms = min(LONG_PAUSE_TARGET_MS // 2, duration_ms // 2)
-    left_trim = trim_ms
-    right_trim = trim_ms
-    return start_ms + left_trim, end_ms - right_trim
+    if duration_ms <= LONG_PAUSE_TARGET_MS:
+        return start_ms, start_ms  # zero-width = no cut
+    # Keep LONG_PAUSE_TARGET_MS of pause, split equally at each edge
+    # to preserve breaths at the start and speech onset at the end.
+    # Cut the center excess.
+    keep_per_edge = LONG_PAUSE_TARGET_MS // 2
+    cut_start = start_ms + keep_per_edge
+    cut_end = end_ms - (LONG_PAUSE_TARGET_MS - keep_per_edge)
+    return cut_start, cut_end
 
 
 def build_keep_segments(duration_ms: int, cuts: Sequence[tuple[int, int]]) -> list[tuple[int, int]]:
@@ -111,7 +117,7 @@ def build_keep_segments(duration_ms: int, cuts: Sequence[tuple[int, int]]) -> li
     if cursor < duration_ms:
         keep_segments.append((cursor, duration_ms))
 
-    return [(start, end) for start, end in keep_segments if end > start]
+    return [(start, end) for start, end in keep_segments if (end - start) >= MIN_KEEP_SEGMENT_MS]
 
 
 def build_ffmpeg_output_args(source_audio_path: Path) -> list[str]:
@@ -149,7 +155,7 @@ def render_edit_export(source_audio_path: Path, target_path: Path, keep_segments
         for index, next_label in enumerate(segment_labels[1:], start=1):
             next_chain_label = f"cf{index - 1}{index}"
             filter_parts.append(
-                f"[{chain_label}][{next_label}]acrossfade=d=0.010:c1=tri:c2=tri[{next_chain_label}]"
+                f"[{chain_label}][{next_label}]acrossfade=d=0.075:c1=tri:c2=tri[{next_chain_label}]"
             )
             chain_label = next_chain_label
 
@@ -175,13 +181,10 @@ def render_edit_export(source_audio_path: Path, target_path: Path, keep_segments
             str(target_path),
         ]
 
-        with tempfile.TemporaryDirectory() as temp_dir:
-            temp_log = Path(temp_dir) / "ffmpeg.log"
-            result = subprocess.run(command, capture_output=True, text=True, check=False)
-            temp_log.write_text((result.stdout or "") + "\n" + (result.stderr or ""), encoding="utf-8")
+        result = subprocess.run(command, capture_output=True, text=True, check=False)
 
-            if result.returncode != 0:
-                raise ValueError(f"ffmpeg export failed: {result.stderr.strip() or result.stdout.strip() or 'unknown error'}")
+        if result.returncode != 0:
+            raise ValueError(f"ffmpeg export failed: {result.stderr.strip() or result.stdout.strip() or 'unknown error'}")
     finally:
         if filter_script_path is not None:
             filter_script_path.unlink(missing_ok=True)

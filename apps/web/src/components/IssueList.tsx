@@ -1,4 +1,4 @@
-import type { CSSProperties, ReactNode } from "react"
+import { useEffect, useMemo, useState, type CSSProperties, type ReactNode } from "react"
 import { Issue } from "../types"
 import { ConfidenceFilter, getConfidenceBand, getIssueTypeMeta, humanize } from "../utils"
 import { CollapsibleSection } from "./CollapsibleSection"
@@ -20,8 +20,9 @@ export function IssueList({
   typeFilter,
   confidenceFilter
 }: IssueListProps) {
+  const [sortBy, setSortBy] = useState<"time" | "confidence" | "type">("time")
   const normalizedSearch = searchQuery.trim().toLowerCase()
-  const visibleIssues = issues.filter((issue) => {
+  const visibleIssues = useMemo(() => issues.filter((issue) => {
     if (typeFilter !== "all" && issue.type !== typeFilter) {
       return false
     }
@@ -31,7 +32,28 @@ export function IssueList({
     }
 
     return normalizedSearch.length === 0 || issueMatchesSearch(issue, normalizedSearch)
-  })
+  }), [issues, typeFilter, confidenceFilter, normalizedSearch])
+
+  const sortedIssues = useMemo(() => {
+    const sorted = [...visibleIssues]
+    if (sortBy === "confidence") {
+      sorted.sort((a, b) => b.confidence - a.confidence)
+    } else if (sortBy === "type") {
+      sorted.sort((a, b) => a.type.localeCompare(b.type) || a.start_ms - b.start_ms)
+    } else {
+      sorted.sort((a, b) => a.start_ms - b.start_ms)
+    }
+    return sorted
+  }, [visibleIssues, sortBy])
+
+  // Auto-scroll selected issue into view
+  useEffect(() => {
+    if (selectedIssueId == null) return
+    const el = document.querySelector(`.issue-card[aria-pressed="true"]`)
+    if (el) {
+      el.scrollIntoView({ behavior: "smooth", block: "nearest" })
+    }
+  }, [selectedIssueId])
 
   return (
     <CollapsibleSection
@@ -39,11 +61,16 @@ export function IssueList({
       subtitle={`${visibleIssues.length} matching issue${visibleIssues.length === 1 ? "" : "s"}`}
       storageKey="chapter-review:issue-list"
     >
-      {visibleIssues.length === 0 ? (
+      <select value={sortBy} onChange={(e) => setSortBy(e.target.value as "time" | "confidence" | "type")} className="issue-sort-select">
+        <option value="time">Sort by Time</option>
+        <option value="confidence">Sort by Confidence</option>
+        <option value="type">Sort by Type</option>
+      </select>
+      {sortedIssues.length === 0 ? (
         <p className="muted">No issues match the current search and filters.</p>
       ) : (
         <div className="list">
-          {visibleIssues.map((issue) => {
+          {sortedIssues.map((issue) => {
             const isSelected = issue.id === selectedIssueId
             const typeMeta = getIssueTypeMeta(issue.type)
             const confidenceBand = getConfidenceBand(issue.confidence)
@@ -65,6 +92,11 @@ export function IssueList({
                     <span className={`issue-confidence-badge ${confidenceBand.className}`}>{confidenceBand.label}</span>
                   </div>
                   <span className="pill">{humanize(issue.status)}</span>
+                  {issue.triage_verdict ? (
+                    <span className={`issue-triage-badge ${issue.triage_verdict}`} title={issue.triage_reason ?? ""}>
+                      {issue.triage_verdict === "dismiss" ? "AI: Likely OK" : issue.triage_verdict === "keep" ? "AI: Review" : "AI: Unclear"}
+                    </span>
+                  ) : null}
                 </div>
 
                 <div className="issue-card-text">

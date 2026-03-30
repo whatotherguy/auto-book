@@ -104,9 +104,7 @@ def _make_issue(
 def _default_issue_status(confidence: float) -> str:
     if confidence >= ISSUE_STATUS_APPROVED_CONFIDENCE_THRESHOLD:
         return "approved"
-    if confidence >= ISSUE_STATUS_PENDING_CONFIDENCE_THRESHOLD:
-        return "pending"
-    return "pending"
+    return "needs_manual"
 
 
 def _confidence_for_span(confidence_by_span: dict[int, float], span: int, default: float) -> float:
@@ -212,7 +210,7 @@ def _detect_repeated_windows(
     return issues
 
 
-def detect_false_starts(tokens: Sequence[TokenLike], token_limit: int = 30) -> list[dict[str, Any]]:
+def detect_false_starts(tokens: Sequence[TokenLike], token_limit: int = 100) -> list[dict[str, Any]]:
     return _detect_repeated_windows(
         tokens[:token_limit],
         issue_type="false_start",
@@ -422,12 +420,21 @@ def detect_alignment_issues(
         if op == "delete":
             start_ms, end_ms = _range_from_spoken_span(spoken_tokens, spoken_start, spoken_end)
             context_before, context_after = _issue_context(manuscript_tokens, manuscript_start, manuscript_end)
+            span_length = manuscript_end - manuscript_start
+            # Check flanking matches for confidence boosting
+            boosted_confidence = MISSING_TEXT_CONFIDENCE
+            if span_length >= 5:
+                match_index = matches.index(match)
+                prev_is_equal = match_index > 0 and matches[match_index - 1].get("op") == "equal"
+                next_is_equal = match_index < len(matches) - 1 and matches[match_index + 1].get("op") == "equal"
+                if prev_is_equal and next_is_equal:
+                    boosted_confidence = 0.88
             issues.append(
                 _make_issue(
                     "missing_text",
                     start_ms,
                     end_ms,
-                    MISSING_TEXT_CONFIDENCE,
+                    boosted_confidence,
                     expected_text=str(match.get("manuscript_text", "")),
                     spoken_text="",
                     context_before=context_before,
@@ -484,9 +491,25 @@ def detect_alignment_issues(
                 )
             )
 
-    issues.extend(detect_false_starts(spoken_tokens, token_limit=30))
-    issues.extend(detect_repetition(spoken_tokens, start_offset=30))
+    issues.extend(detect_false_starts(spoken_tokens, token_limit=100))
+    issues.extend(detect_repetition(spoken_tokens, start_offset=100))
     issues.extend(detect_long_pauses(spoken_tokens, manuscript_tokens=manuscript_tokens, alignment=alignment))
+
+    # Filter repetitions that match manuscript (intentional literary repetition)
+    manuscript_values = _tokens_to_values(manuscript_tokens)
+    manuscript_text_joined = " ".join(manuscript_values)
+    filtered_issues = []
+    for issue in issues:
+        if issue["type"] == "repetition":
+            phrase = issue.get("expected_text", "")
+            repeated = f"{phrase} {phrase}"
+            if repeated and repeated in manuscript_text_joined:
+                issue["type"] = "uncertain_alignment"
+                issue["confidence"] = min(issue["confidence"], 0.50)
+                issue["note"] = "Repetition matches manuscript text \u2014 may be intentional."
+        filtered_issues.append(issue)
+    issues = filtered_issues
+
     return _dedupe_issues(issues)
 
 

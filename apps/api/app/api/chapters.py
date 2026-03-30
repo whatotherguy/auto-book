@@ -1,6 +1,7 @@
 from pathlib import Path
 import json
 import logging
+import shutil
 
 from fastapi import APIRouter, Depends, File, HTTPException, UploadFile
 from fastapi.responses import FileResponse
@@ -181,11 +182,15 @@ async def upload_audio(chapter_id: int, file: UploadFile = File(...), session: S
         raise HTTPException(status_code=400, detail="Only .wav audio files are supported")
 
     temp_target = dirs["working"] / f".upload-{filename}"
-    data = await file.read()
-    if not data:
-        raise HTTPException(status_code=400, detail="Uploaded WAV file is empty")
+    total_size = 0
+    with temp_target.open("wb") as fh:
+        while chunk := await file.read(1024 * 1024):
+            total_size += len(chunk)
+            fh.write(chunk)
 
-    temp_target.write_bytes(data)
+    if total_size == 0:
+        temp_target.unlink(missing_ok=True)
+        raise HTTPException(status_code=400, detail="Uploaded WAV file is empty")
 
     try:
         duration_ms = read_wav_duration_ms(temp_target)
@@ -196,8 +201,7 @@ async def upload_audio(chapter_id: int, file: UploadFile = File(...), session: S
     reset_chapter_audio_review_state(session, chapter)
 
     target = dirs["source"] / filename
-    target.write_bytes(data)
-    temp_target.unlink(missing_ok=True)
+    shutil.move(str(temp_target), str(target))
 
     chapter.audio_file_path = str(target.resolve())
     chapter.duration_ms = duration_ms
@@ -219,6 +223,34 @@ def get_audio_file(chapter_id: int, session: Session = Depends(get_session)):
         raise HTTPException(status_code=404, detail="Audio not uploaded")
 
     return FileResponse(path=audio_path, filename=audio_path.name, media_type="audio/wav")
+
+
+@router.get("/chapters/{chapter_id}/spoken-tokens")
+def get_spoken_tokens(chapter_id: int, session: Session = Depends(get_session)):
+    chapter = session.get(Chapter, chapter_id)
+    if not chapter:
+        raise HTTPException(status_code=404, detail="Chapter not found")
+
+    dirs = ensure_chapter_dirs(chapter.project_id, chapter.chapter_number)
+    path = dirs["analysis"] / "spoken_tokens.json"
+    if not path.exists():
+        raise HTTPException(status_code=404, detail="Spoken tokens not available — run analysis first")
+
+    return json.loads(path.read_text(encoding="utf-8"))
+
+
+@router.get("/chapters/{chapter_id}/alignment")
+def get_alignment(chapter_id: int, session: Session = Depends(get_session)):
+    chapter = session.get(Chapter, chapter_id)
+    if not chapter:
+        raise HTTPException(status_code=404, detail="Chapter not found")
+
+    dirs = ensure_chapter_dirs(chapter.project_id, chapter.chapter_number)
+    path = dirs["analysis"] / "alignment.json"
+    if not path.exists():
+        raise HTTPException(status_code=404, detail="Alignment data not available — run analysis first")
+
+    return json.loads(path.read_text(encoding="utf-8"))
 
 
 @router.post("/chapters/{chapter_id}/text")
@@ -288,11 +320,16 @@ def analyze_chapter(
 
     sync_chapter_audio_path(session, chapter)
 
+    if not chapter.audio_file_path:
+        raise HTTPException(status_code=400, detail="Audio must be uploaded before running analysis")
+    if not chapter.raw_text or not chapter.raw_text.strip():
+        raise HTTPException(status_code=400, detail="Manuscript text must be provided before running analysis")
+
     job = AnalysisJob(chapter_id=chapter_id, status="queued", progress=0)
     session.add(job)
     session.commit()
     session.refresh(job)
 
-    start_analysis_job(job.id, transcription_mode=payload.transcription_mode)
+    start_analysis_job(job.id, transcription_mode=payload.transcription_mode, force_retranscribe=payload.force_retranscribe, enable_llm_triage=payload.enable_llm_triage)
 
     return AnalyzeResponse(job_id=job.id, status=job.status)

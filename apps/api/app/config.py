@@ -42,6 +42,10 @@ class Settings(BaseModel):
     database_url: str = os.getenv("DATABASE_URL", f"sqlite:///{DEFAULT_DATABASE_PATH.as_posix()}")
     data_root: Path = Path(os.getenv("DATA_ROOT", str(DEFAULT_DATA_ROOT)))
     cors_origins: list[str] = os.getenv("CORS_ORIGINS", "http://localhost:5173").split(",")
+    openai_api_key: str = os.getenv("OPENAI_API_KEY", "")
+    anthropic_api_key: str = os.getenv("ANTHROPIC_API_KEY", "")
+    llm_provider: str = os.getenv("LLM_PROVIDER", "")  # "openai", "anthropic", or "" for disabled
+    transcription_backend: str = os.getenv("TRANSCRIPTION_BACKEND", "local")  # "local" or "whisper_api"
 
 
 settings = Settings()

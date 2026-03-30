@@ -1,5 +1,5 @@
-from typing import Optional
-from pydantic import BaseModel, model_validator
+from typing import Literal, Optional
+from pydantic import BaseModel, Field, model_validator
 
 
 class ProjectCreate(BaseModel):
@@ -7,7 +7,7 @@ class ProjectCreate(BaseModel):
 
 
 class ChapterCreate(BaseModel):
-    chapter_number: int
+    chapter_number: int = Field(ge=1)
     title: Optional[str] = None
 
 
@@ -17,6 +17,8 @@ class ChapterTextUpdate(BaseModel):
 
 class AnalyzeChapterRequest(BaseModel):
     transcription_mode: str = "optimized"
+    force_retranscribe: bool = False
+    enable_llm_triage: bool = True  # Run LLM false-positive filtering if API key is configured
 
     @model_validator(mode="after")
     def validate_mode(self) -> "AnalyzeChapterRequest":
@@ -27,7 +29,7 @@ class AnalyzeChapterRequest(BaseModel):
 
 
 class IssueUpdate(BaseModel):
-    status: Optional[str] = None
+    status: Optional[Literal["approved", "rejected", "needs_manual"]] = None
     note: Optional[str] = None
     start_ms: Optional[int] = None
     end_ms: Optional[int] = None

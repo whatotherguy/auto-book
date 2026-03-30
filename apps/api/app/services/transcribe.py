@@ -13,6 +13,51 @@ logger = logging.getLogger(__name__)
 
 TranscribeProgressCallback = Callable[[str, int, str], None]
 
+# ---------------------------------------------------------------------------
+# GPU auto-detection (cached after first call)
+# ---------------------------------------------------------------------------
+
+_gpu_status: dict[str, Any] | None = None
+
+
+def detect_gpu() -> dict[str, Any]:
+    """Detect CUDA GPU availability. Cached after first call."""
+    global _gpu_status
+    if _gpu_status is not None:
+        return _gpu_status
+
+    result: dict[str, Any] = {
+        "available": False,
+        "device": "cpu",
+        "compute_type": "int8",
+        "name": None,
+        "vram_gb": None,
+    }
+
+    try:
+        import torch
+
+        if torch.cuda.is_available():
+            result["available"] = True
+            result["device"] = "cuda"
+            result["name"] = torch.cuda.get_device_name(0)
+            vram_bytes = torch.cuda.get_device_properties(0).total_mem
+            result["vram_gb"] = round(vram_bytes / (1024**3), 1)
+            # Choose compute type based on VRAM
+            if result["vram_gb"] >= 8:
+                result["compute_type"] = "float16"
+            elif result["vram_gb"] >= 4:
+                result["compute_type"] = "int8_float16"
+            else:
+                result["compute_type"] = "int8"
+    except ImportError:
+        pass
+    except Exception as exc:
+        logger.warning("GPU detection failed: %s", exc)
+
+    _gpu_status = result
+    return result
+
 MODEL_CANDIDATES = ("large-v3", "medium", "small", "tiny")
 PROFILE_CANDIDATES = {"balanced", "high_quality", "max_quality"}
 MODE_TO_PROFILE = {
@@ -79,8 +124,25 @@ def build_initial_prompt(manuscript_text: str) -> str | None:
     if not normalized:
         return None
 
-    prompt = normalized[:500].strip()
-    return prompt or None
+    # Extract proper nouns and uncommon words for Whisper vocabulary priming
+    words = manuscript_text.split()
+    unique_words: list[str] = []
+    seen: set[str] = set()
+    for word in words:
+        cleaned = word.strip(".,!?;:\"'()[]")
+        if not cleaned or cleaned.lower() in seen:
+            continue
+        seen.add(cleaned.lower())
+        # Include capitalized words (likely proper nouns) and long words (likely domain-specific)
+        if (len(cleaned) > 1 and cleaned[0].isupper() and not cleaned.isupper()) or len(cleaned) >= 8:
+            unique_words.append(cleaned)
+
+    vocab_hint = " ".join(unique_words[:30])  # Up to 30 unique vocabulary words
+    context = normalized[:400].strip()
+
+    prompt = f"{vocab_hint}. {context}" if vocab_hint else context
+    # Whisper prompt limit is roughly 224 tokens (~1000 chars)
+    return prompt[:1000].strip() or None
 
 
 def parse_optional_int(raw_value: str | None) -> int | None:
@@ -91,14 +153,20 @@ def parse_optional_int(raw_value: str | None) -> int | None:
 
 
 def build_model_candidates(configured_model_name: str | None, fallback_model_name: str, profile: str, device: str) -> tuple[str, ...]:
-    if configured_model_name:
+    if device == "cuda":
+        # GPU is fast enough for large models even in balanced mode
+        if configured_model_name:
+            model_names = (configured_model_name, *[n for n in MODEL_CANDIDATES if n != configured_model_name])
+        else:
+            model_names = MODEL_CANDIDATES  # large-v3 first
+    elif configured_model_name:
         model_names = (configured_model_name, *[name for name in MODEL_CANDIDATES if name != configured_model_name])
     elif profile == "max_quality":
         model_names = MODEL_CANDIDATES
     elif profile == "high_quality":
-        model_names = ("medium", "small", "tiny", "large-v3") if device == "cpu" else MODEL_CANDIDATES
+        model_names = ("medium", "small", "tiny", "large-v3")
     else:
-        model_names = ("medium", "small", "tiny", "large-v3") if device == "cpu" else ("large-v3", "medium", "small", "tiny")
+        model_names = ("medium", "small", "tiny", "large-v3")
 
     if fallback_model_name not in model_names:
         model_names = (*model_names, fallback_model_name)
@@ -137,8 +205,16 @@ def get_transcription_runtime_settings() -> dict[str, Any]:
         logger.warning("Unknown WHISPERX_PROFILE '%s'; using balanced.", profile)
         profile = "balanced"
 
-    device = os.getenv("WHISPERX_DEVICE", "cpu").strip().lower() or "cpu"
-    compute_type = os.getenv("WHISPERX_COMPUTE_TYPE", "int8").strip() or "int8"
+    raw_device = os.getenv("WHISPERX_DEVICE", "auto").strip().lower() or "auto"
+    raw_compute_type = os.getenv("WHISPERX_COMPUTE_TYPE", "").strip()
+
+    if raw_device == "auto":
+        gpu = detect_gpu()
+        device = gpu["device"]  # "cuda" or "cpu"
+        compute_type = raw_compute_type or gpu["compute_type"]
+    else:
+        device = raw_device
+        compute_type = raw_compute_type or ("float16" if device == "cuda" else "int8")
     configured_model_name = os.getenv("WHISPERX_MODEL")
     fallback_model_name = os.getenv("WHISPERX_FALLBACK_MODEL", "tiny").strip() or "tiny"
     cpu_threads = parse_optional_int(os.getenv("WHISPERX_CPU_THREADS"))
@@ -201,28 +277,32 @@ def transcribe_with_faster_whisper(
     active_model_name = None
     last_model_error: Exception | None = None
     for index, model_name in enumerate(model_names):
-        try:
-            if progress_callback:
-                progress_callback("loading_model", 38, f"Loading {model_name}")
-            model_kwargs: dict[str, Any] = {
-                "device": device,
-                "compute_type": compute_type,
-                "local_files_only": True,
-            }
-            if cpu_threads is not None:
-                model_kwargs["cpu_threads"] = cpu_threads
-            if num_workers is not None:
-                model_kwargs["num_workers"] = num_workers
+        for local_only in (True, False):
+            try:
+                if progress_callback:
+                    label = f"Loading {model_name}" + ("" if local_only else " (downloading)")
+                    progress_callback("loading_model", 38, label)
+                model_kwargs: dict[str, Any] = {
+                    "device": device,
+                    "compute_type": compute_type,
+                    "local_files_only": local_only,
+                }
+                if cpu_threads is not None:
+                    model_kwargs["cpu_threads"] = cpu_threads
+                if num_workers is not None:
+                    model_kwargs["num_workers"] = num_workers
 
-            model = WhisperModel(model_name, **model_kwargs)
-            active_model_name = model_name
+                model = WhisperModel(model_name, **model_kwargs)
+                active_model_name = model_name
+                break
+            except Exception as exc:
+                last_model_error = exc
+        if model is not None:
             if index > 0:
                 model_load_warnings.append(
-                    f"Model '{model_names[0]}' was unavailable; used cached fallback model '{model_name}' instead."
+                    f"Model '{model_names[0]}' was unavailable; used fallback model '{model_name}' instead."
                 )
             break
-        except Exception as exc:
-            last_model_error = exc
 
     if model is None or active_model_name is None:
         raise RuntimeError(f"Unable to load any Whisper model: {last_model_error}")
@@ -310,6 +390,7 @@ def transcribe_with_faster_whisper(
         "profile": profile,
         "device": device,
         "compute_type": compute_type,
+        "gpu_name": detect_gpu().get("name") if device == "cuda" else None,
         "decode_options": {
             "beam_size": decode_options["beam_size"],
             "best_of": decode_options["best_of"],
@@ -329,14 +410,47 @@ def transcribe_with_whisperx(
     duration_ms: int | None = None,
     progress_callback: Optional[TranscribeProgressCallback] = None,
     transcription_mode: str | None = None,
+    cache_path: Path | None = None,
 ) -> dict:
     """
     Prefer a real WhisperX run when available, otherwise fall back to a
     deterministic placeholder transcript so the rest of the review pipeline
     remains inspectable offline.
+
+    If *cache_path* points to an existing transcript JSON file, load and
+    return it instead of re-transcribing (unless the cached result is a
+    placeholder or has no words).
     """
     if audio_path is None:
         return build_placeholder_transcript(manuscript_text, duration_ms)
+
+    # Check for cached transcript
+    if cache_path is not None and cache_path.exists():
+        try:
+            import json
+            cached = json.loads(cache_path.read_text(encoding="utf-8"))
+            if not cached.get("is_placeholder") and cached.get("words"):
+                logger.info("Using cached transcript from %s", cache_path)
+                cached.setdefault("warnings", []).append("Loaded from cached transcript.")
+                return cached
+        except (json.JSONDecodeError, OSError):
+            pass  # Fall through to fresh transcription
+
+    # Check if Whisper API backend is selected
+    from ..config import settings as app_settings
+    if app_settings.transcription_backend == "whisper_api":
+        from .transcribe_api import is_whisper_api_available, transcribe_with_whisper_api
+        if is_whisper_api_available():
+            try:
+                return transcribe_with_whisper_api(
+                    audio_path,
+                    manuscript_text=manuscript_text,
+                    duration_ms=duration_ms,
+                    progress_callback=progress_callback,
+                )
+            except Exception as exc:
+                logger.warning("Whisper API transcription failed, falling back to local: %s", exc)
+                # Fall through to local transcription
 
     try:
         return transcribe_with_faster_whisper(

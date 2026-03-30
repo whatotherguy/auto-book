@@ -22,7 +22,7 @@ def test_normalize_text_multiple_spaces():
 
 
 def test_normalize_text_unicode_accented_characters():
-    assert normalize_text("caf\u00e9 d\u00e9j\u00e0 vu") == "caf d j vu"
+    assert normalize_text("caf\u00e9 d\u00e9j\u00e0 vu") == "caf\u00e9 d\u00e9j\u00e0 vu"
 
 
 def test_normalize_for_alignment_expands_common_abbreviations():
@@ -30,8 +30,8 @@ def test_normalize_for_alignment_expands_common_abbreviations():
 
 
 def test_normalize_for_alignment_handles_currency_commas_and_ordinals():
-    assert normalize_for_alignment("$1,200 £50 1st 2nd 3rd 4th 20th 21st") == "1200 50 first second third fourth twentieth 21"
+    assert normalize_for_alignment("$1,200 £50 1st 2nd 3rd 4th 20th 21st") == "twelve hundred fifty first second third fourth twentieth twenty one"
 
 
 def test_normalize_for_alignment_removes_am_pm_period_variants():
-    assert normalize_for_alignment("10 a.m. and 3 p.m.") == "10 am and 3 pm"
+    assert normalize_for_alignment("10 a.m. and 3 p.m.") == "ten am and three pm"

@@ -1,4 +1,4 @@
-import { Issue } from "../types"
+import { Issue, IssueStatus } from "../types"
 import { formatTimecode, getConfidenceBand } from "../utils"
 import { CollapsibleSection } from "./CollapsibleSection"
 import { useState } from "react"
@@ -24,7 +24,7 @@ export function IssueDetail({
   onStatusChange
 }: {
   issue: Issue | null
-  onStatusChange: (issue: Issue, status: string) => Promise<void>
+  onStatusChange: (issue: Issue, status: IssueStatus) => Promise<void>
 }) {
   const [isSaving, setIsSaving] = useState(false)
 
@@ -40,7 +40,7 @@ export function IssueDetail({
     )
   }
 
-  async function setStatus(status: string) {
+  async function setStatus(status: IssueStatus) {
     try {
       setIsSaving(true)
       await onStatusChange(issue, status)
@@ -65,19 +65,28 @@ export function IssueDetail({
         </span>
       </div>
       <p><strong>Confidence Score:</strong> {issue.confidence.toFixed(2)}</p>
+      {issue.triage_verdict ? (
+        <p>
+          <strong>AI Triage:</strong>{" "}
+          <span className={`issue-triage-badge ${issue.triage_verdict}`}>
+            {issue.triage_verdict === "dismiss" ? "Likely false positive" : issue.triage_verdict === "keep" ? "Likely real issue" : "Needs manual review"}
+          </span>
+          {issue.triage_reason ? <span className="muted"> — {issue.triage_reason}</span> : null}
+        </p>
+      ) : null}
       <p><strong>Expected Text:</strong> {issue.expected_text || "None provided."}</p>
       <p><strong>Spoken Text:</strong> {issue.spoken_text || "None captured."}</p>
       <p><strong>Context Before:</strong> {issue.context_before || "None available."}</p>
       <p><strong>Context After:</strong> {issue.context_after || "None available."}</p>
       {issue.note ? <p><strong>Note:</strong> {issue.note}</p> : null}
       <div className="row" aria-live="polite">
-        <button onClick={() => setStatus("approved")} disabled={isSaving || issue.status === "approved"}>
+        <button onClick={() => void setStatus("approved")} disabled={isSaving || issue.status === "approved"}>
           {isSaving && issue.status !== "approved" ? "Saving…" : "Approve Issue"}
         </button>
-        <button onClick={() => setStatus("rejected")} disabled={isSaving || issue.status === "rejected"}>
+        <button onClick={() => void setStatus("rejected")} disabled={isSaving || issue.status === "rejected"}>
           Reject Issue
         </button>
-        <button onClick={() => setStatus("needs_manual")} disabled={isSaving || issue.status === "needs_manual"}>
+        <button onClick={() => void setStatus("needs_manual")} disabled={isSaving || issue.status === "needs_manual"}>
           Mark for Manual Review
         </button>
       </div>

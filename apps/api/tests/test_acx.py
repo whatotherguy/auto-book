@@ -71,9 +71,10 @@ def test_analyze_acx_audio_includes_cross_chapter_consistency_note(tmp_path: Pat
     report = analyze_acx_audio(target)
 
     assert report["checks"][-1] == {
-        "check": "cross_chapter_consistency",
-        "passed": None,
-        "value": None,
-        "threshold": "<=20dB variation across all chapters",
-        "note": "Cross-chapter consistency requires comparing all chapters. Review manually before ACX submission.",
+        "name": "cross_chapter_consistency",
+        "status": "info",
+        "actual": "N/A",
+        "target": "<=20dB variation across all chapters",
+        "summary": "Cross-chapter consistency requires comparing all chapters. Review manually before ACX submission.",
+        "suggestion": None,
     }

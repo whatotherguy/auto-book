@@ -25,7 +25,10 @@ def list_projects(session: Session = Depends(get_session)):
 
 @router.get("/{project_id}")
 def get_project(project_id: int, session: Session = Depends(get_session)):
-    return session.get(Project, project_id)
+    project = session.get(Project, project_id)
+    if not project:
+        raise HTTPException(status_code=404, detail="Project not found")
+    return project
 
 
 @router.delete("/{project_id}")

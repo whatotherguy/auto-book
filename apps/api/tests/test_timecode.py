@@ -10,12 +10,9 @@ def test_zero_milliseconds():
 
 
 def test_negative_milliseconds():
-    try:
-        result = ms_to_timecode(-1)
-    except ValueError:
-        return
-
-    assert result == "-1:59:59.999"
+    import pytest
+    with pytest.raises(ValueError):
+        ms_to_timecode(-1)
 
 
 def test_large_value_over_one_hour():

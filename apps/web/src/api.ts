@@ -1,0 +1,225 @@
+import { AcxCheck, AnalysisJob, Chapter, Issue, Project, TranscriptionMode } from "./types"
+
+const API_BASE = import.meta.env.VITE_API_BASE ?? "http://localhost:8000"
+
+async function fetchJson<T>(path: string, init?: RequestInit): Promise<T> {
+  const response = await fetch(`${API_BASE}${path}`, {
+    cache: "no-store",
+    ...init
+  })
+
+  if (!response.ok) {
+    const message = await response.text()
+    throw new Error(message || `Request failed: ${response.status}`)
+  }
+
+  return response.json() as Promise<T>
+}
+
+export function getChapterAudioUrl(chapterId: number, revision?: string | number | null) {
+  if (revision == null) {
+    return `${API_BASE}/chapters/${chapterId}/audio-file`
+  }
+
+  return `${API_BASE}/chapters/${chapterId}/audio-file?rev=${encodeURIComponent(String(revision))}`
+}
+
+export function getExportUrl(chapterId: number, kind: "csv" | "json") {
+  return `${API_BASE}/chapters/${chapterId}/exports/${kind}`
+}
+
+export function getProjects() {
+  return fetchJson<Project[]>("/projects")
+}
+
+export function getProject(projectId: number) {
+  return fetchJson<Project>(`/projects/${projectId}`)
+}
+
+export function createProject(name: string) {
+  return fetchJson<Project>("/projects", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ name })
+  })
+}
+
+export function deleteProject(projectId: number) {
+  return fetchJson<{ ok: boolean; deleted_project_id: number }>(`/projects/${projectId}`, {
+    method: "DELETE"
+  })
+}
+
+export function getProjectChapters(projectId: number) {
+  return fetchJson<Chapter[]>(`/projects/${projectId}/chapters`)
+}
+
+export function createChapter(projectId: number, chapterNumber: number, title?: string) {
+  return fetchJson<Chapter>(`/projects/${projectId}/chapters`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ chapter_number: chapterNumber, title })
+  })
+}
+
+export function deleteChapter(chapterId: number) {
+  return fetchJson<{ ok: boolean; deleted_chapter_id: number }>(`/chapters/${chapterId}`, {
+    method: "DELETE"
+  })
+}
+
+export function uploadChapterAudio(chapterId: number, file: File) {
+  const formData = new FormData()
+  formData.append("file", file)
+
+  return fetchJson<Chapter & { ok: boolean }>(`/chapters/${chapterId}/audio`, {
+    method: "POST",
+    body: formData
+  })
+}
+
+export function uploadChapterAudioWithProgress(
+  chapterId: number,
+  file: File,
+  onProgress: (progress: number) => void
+) {
+  return new Promise<Chapter & { ok: boolean }>((resolve, reject) => {
+    const xhr = new XMLHttpRequest()
+    xhr.open("POST", `${API_BASE}/chapters/${chapterId}/audio`)
+    xhr.responseType = "json"
+
+    xhr.upload.onprogress = (event) => {
+      if (!event.lengthComputable || event.total <= 0) {
+        return
+      }
+
+      onProgress(Math.round((event.loaded / event.total) * 100))
+    }
+
+    xhr.onerror = () => {
+      reject(new Error("Failed to upload chapter WAV."))
+    }
+
+    xhr.onload = () => {
+      if (xhr.status < 200 || xhr.status >= 300) {
+        reject(new Error((xhr.response && xhr.response.detail) || `Upload failed: ${xhr.status}`))
+        return
+      }
+
+      resolve(xhr.response as Chapter & { ok: boolean })
+    }
+
+    const formData = new FormData()
+    formData.append("file", file)
+    xhr.send(formData)
+  })
+}
+
+export function uploadChapterTextFile(chapterId: number, file: File) {
+  const formData = new FormData()
+  formData.append("file", file)
+
+  return fetchJson<Chapter>(`/chapters/${chapterId}/text-file`, {
+    method: "POST",
+    body: formData
+  })
+}
+
+export function uploadChapterText(chapterId: number, rawText: string) {
+  return fetchJson<Chapter>(`/chapters/${chapterId}/text`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ raw_text: rawText })
+  })
+}
+
+export function getChapter(chapterId: number) {
+  return fetchJson<Chapter>(`/chapters/${chapterId}`)
+}
+
+export function getIssues(chapterId: number) {
+  return fetchJson<Issue[]>(`/chapters/${chapterId}/issues`)
+}
+
+export function analyzeChapter(chapterId: number, transcriptionMode: TranscriptionMode) {
+  return fetchJson<{ job_id: number; status: string }>(`/chapters/${chapterId}/analyze`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ transcription_mode: transcriptionMode })
+  })
+}
+
+export function getLatestAnalysisJob(chapterId: number, type?: string) {
+  const suffix = type ? `?type=${encodeURIComponent(type)}` : ""
+  return fetchJson<AnalysisJob>(`/chapters/${chapterId}/analysis-job${suffix}`)
+}
+
+export function getJob(jobId: number) {
+  return fetchJson<AnalysisJob>(`/jobs/${jobId}`)
+}
+
+export function getAcxCheck(chapterId: number) {
+  return fetchJson<AcxCheck | null>(`/chapters/${chapterId}/acx-check`)
+}
+
+export function runAcxCheck(chapterId: number) {
+  return fetchJson<AcxCheck>(`/chapters/${chapterId}/acx-check`, {
+    method: "POST"
+  })
+}
+
+export function startAutoEditJob(chapterId: number) {
+  return fetchJson<{ job_id: number; status: string; output_path: string }>(`/chapters/${chapterId}/exports/edited-wav-job`, {
+    method: "POST"
+  })
+}
+
+export async function downloadChapterExport(chapterId: number, kind: "csv" | "json") {
+  const response = await fetch(`${API_BASE}/chapters/${chapterId}/exports/${kind}`, {
+    method: "POST"
+  })
+
+  if (!response.ok) {
+    const message = await response.text()
+    throw new Error(message || `Export failed: ${response.status}`)
+  }
+
+  const blob = await response.blob()
+  const url = URL.createObjectURL(blob)
+  const anchor = document.createElement("a")
+  anchor.href = url
+  anchor.download = `issues.${kind}`
+  document.body.appendChild(anchor)
+  anchor.click()
+  document.body.removeChild(anchor)
+  window.setTimeout(() => URL.revokeObjectURL(url), 1000)
+}
+
+export async function downloadEditedChapterAudio(chapterId: number) {
+  const response = await fetch(`${API_BASE}/chapters/${chapterId}/exports/edited-wav`, {
+    method: "POST"
+  })
+
+  if (!response.ok) {
+    const message = await response.text()
+    throw new Error(message || `Edited WAV export failed: ${response.status}`)
+  }
+
+  const blob = await response.blob()
+  const url = URL.createObjectURL(blob)
+  const anchor = document.createElement("a")
+  anchor.href = url
+  anchor.download = "chapter.auto-edited.wav"
+  document.body.appendChild(anchor)
+  anchor.click()
+  document.body.removeChild(anchor)
+  window.setTimeout(() => URL.revokeObjectURL(url), 1000)
+}
+
+export function updateIssue(issueId: number, payload: Record<string, unknown>) {
+  return fetchJson<Issue>(`/issues/${issueId}`, {
+    method: "PATCH",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(payload)
+  })
+}

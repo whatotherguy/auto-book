@@ -30,13 +30,16 @@ Review-first only. No destructive editing of source WAV files.
 Start the backend and frontend in separate terminals.
 
 ### Backend
+
 ```bash
 cd apps/api
 python -m venv .venv
 .\.venv\Scripts\Activate.ps1
-pip install -e .
-uvicorn app.main:app --reload --port 8000
+python -m pip install -e ".[dev]"
+python -m uvicorn app.main:app --reload --port 8000
 ```
+
+If you have an NVIDIA GPU, install PyTorch with CUDA before the `pip install -e` step (see GPU Transcription below).
 
 ### Frontend
 ```bash
@@ -44,8 +47,12 @@ cd apps/web
 npm install
 npm run dev
 ```
+
+After the first install, use `npm run web` from the repo root instead.
 ### Run Tests
-npm run tests
+```bash
+npm test
+```
 
 ### Quick start
 If the virtualenv and dependencies are already installed:
@@ -66,15 +73,15 @@ Copy `.env.example` to `.env` in `apps/api` if needed.
 
 ### GPU Transcription (Recommended)
 
-For dramatically faster transcription (45 min -> 3 min per hour of audio):
+For dramatically faster transcription (45 min -> 3 min per hour of audio). Requires an NVIDIA GPU with 4+ GB VRAM.
+
+After creating and activating the venv, install PyTorch with CUDA **before** installing the project dependencies:
 
 ```bash
-cd apps/api
-python setup_gpu.py
+python -m pip install torch torchaudio --index-url https://download.pytorch.org/whl/cu128
 ```
 
-This installs PyTorch with CUDA support and downloads the large-v3 Whisper model.
-Requires an NVIDIA GPU with 4+ GB VRAM. The app auto-detects GPU on startup.
+Then continue with `python -m pip install -e ".[dev]"` as normal. The app auto-detects GPU on startup.
 
 ### Transcription tuning
 - `WHISPERX_PROFILE=balanced` is the practical default for long CPU transcription jobs.

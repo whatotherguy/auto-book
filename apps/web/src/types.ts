@@ -213,6 +213,20 @@ export type HealthStatus = {
   llm_provider: string
 }
 
+export type GpuThermalStatus = {
+  temperature_c: number | null
+  power_draw_w: number | null
+  utilization_pct: number | null
+  monitoring_available: boolean
+}
+
+export type ThermalProtectionSettings = {
+  enabled: boolean
+  warning_temp_c: number
+  critical_temp_c: number
+  cooldown_seconds: number
+}
+
 export type AppSettings = {
   transcription_backend: string
   llm_provider: string
@@ -220,8 +234,11 @@ export type AppSettings = {
   has_anthropic_key: boolean
   gpu_available: boolean
   gpu_name: string | null
+  gpu_vram_gb: number | null
   whisper_api_available: boolean
   triage_available: boolean
+  gpu_thermal: GpuThermalStatus
+  thermal_protection: ThermalProtectionSettings
 }
 
 export type AcxCheck = {

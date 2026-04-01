@@ -46,6 +46,11 @@ class Settings(BaseModel):
     anthropic_api_key: str = os.getenv("ANTHROPIC_API_KEY", "")
     llm_provider: str = os.getenv("LLM_PROVIDER", "")  # "openai", "anthropic", or "" for disabled
     transcription_backend: str = os.getenv("TRANSCRIPTION_BACKEND", "local")  # "local" or "whisper_api"
+    # GPU thermal protection
+    gpu_thermal_protection: bool = os.getenv("GPU_THERMAL_PROTECTION", "true").strip().lower() in ("true", "1", "yes")
+    gpu_temp_warning: int = int(os.getenv("GPU_TEMP_WARNING", "78"))
+    gpu_temp_critical: int = int(os.getenv("GPU_TEMP_CRITICAL", "85"))
+    gpu_cooldown_seconds: int = int(os.getenv("GPU_COOLDOWN_SECONDS", "30"))
 
 
 settings = Settings()

@@ -82,6 +82,7 @@ def run_analysis(
             progress_callback=make_transcribe_progress_callback(session, job),
             transcription_mode=transcription_mode,
             cache_path=cache_path,
+            cancel_check=cancel_check,
         )
         write_json_artifact(dirs["analysis"] / "transcript.raw.json", transcript)
 

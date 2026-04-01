@@ -13,6 +13,17 @@ logger = logging.getLogger(__name__)
 
 TranscribeProgressCallback = Callable[[str, int, str], None]
 
+
+def _get_thermal_settings() -> dict[str, Any]:
+    """Read thermal protection settings from environment."""
+    return {
+        "enabled": os.getenv("GPU_THERMAL_PROTECTION", "true").strip().lower() in ("true", "1", "yes"),
+        "warning_temp": int(os.getenv("GPU_TEMP_WARNING", "78")),
+        "critical_temp": int(os.getenv("GPU_TEMP_CRITICAL", "85")),
+        "cooldown_seconds": int(os.getenv("GPU_COOLDOWN_SECONDS", "30")),
+        "poll_interval": int(os.getenv("GPU_THERMAL_POLL_INTERVAL", "10")),
+    }
+
 # ---------------------------------------------------------------------------
 # GPU auto-detection (cached after first call)
 # ---------------------------------------------------------------------------
@@ -260,6 +271,7 @@ def transcribe_with_faster_whisper(
     duration_ms: int | None = None,
     progress_callback: Optional[TranscribeProgressCallback] = None,
     transcription_mode: str | None = None,
+    cancel_check: Optional[Callable[[], bool]] = None,
 ) -> dict:
     from faster_whisper import WhisperModel  # type: ignore
 
@@ -271,6 +283,32 @@ def transcribe_with_faster_whisper(
     decode_options = runtime["decode_options"]
     cpu_threads = runtime["cpu_threads"]
     num_workers = runtime["num_workers"]
+
+    # --- Thermal protection setup (GPU only) ---
+    thermal_guard = None
+    if device == "cuda":
+        from .gpu_thermal import ThermalGuard, read_gpu_temperature
+
+        thermal_cfg = _get_thermal_settings()
+        if thermal_cfg["enabled"]:
+            # Pre-flight temp check: warn if already warm before starting
+            pre_temp = read_gpu_temperature()
+            if pre_temp is not None and pre_temp >= thermal_cfg["warning_temp"]:
+                logger.warning(
+                    "GPU already at %d°C before transcription starts (warning threshold: %d°C).",
+                    pre_temp, thermal_cfg["warning_temp"],
+                )
+                if progress_callback:
+                    progress_callback("thermal_warning", 36, f"GPU already warm ({pre_temp}°C). Thermal protection active.")
+
+            thermal_guard = ThermalGuard(
+                warning_temp=thermal_cfg["warning_temp"],
+                critical_temp=thermal_cfg["critical_temp"],
+                cooldown_seconds=thermal_cfg["cooldown_seconds"],
+                poll_interval=thermal_cfg["poll_interval"],
+                enabled=True,
+                progress_callback=progress_callback,
+            )
 
     model_load_warnings: list[str] = []
     model = None
@@ -321,6 +359,7 @@ def transcribe_with_faster_whisper(
     transcript_parts: list[str] = []
     last_progress_update = 0.0
     total_duration_seconds = max((duration_ms or 0) / 1000, 1.0)
+    segments_since_thermal_check = 0
 
     def report_segment_progress(segment_end: float) -> None:
         nonlocal last_progress_update
@@ -364,6 +403,12 @@ def transcribe_with_faster_whisper(
             }
             words.append(word_payload)
 
+        # Thermal check every ~20 segments to avoid polling too frequently
+        segments_since_thermal_check += 1
+        if thermal_guard and segments_since_thermal_check >= 20:
+            segments_since_thermal_check = 0
+            thermal_guard.check_and_throttle(cancel_check=cancel_check)
+
     warnings: list[str] = list(model_load_warnings)
     if device == "cpu" and active_model_name == "large-v3":
         warnings.append(
@@ -375,10 +420,17 @@ def transcribe_with_faster_whisper(
     if manuscript_text and not transcript_parts:
         warnings.append("Transcription returned no spoken text for this audio file.")
 
+    # Report thermal stats
+    if thermal_guard and thermal_guard.total_cooldown_seconds > 0:
+        warnings.append(
+            f"Thermal protection paused transcription for {thermal_guard.total_cooldown_seconds:.0f}s total "
+            f"(peak GPU temp: {thermal_guard.peak_temp}°C)."
+        )
+
     if progress_callback:
         progress_callback("transcribing", 55, "Finalizing transcription")
 
-    return {
+    result = {
         "text": " ".join(part for part in transcript_parts if part).strip(),
         "segments": segments,
         "words": words,
@@ -403,6 +455,14 @@ def transcribe_with_faster_whisper(
         "is_placeholder": False,
     }
 
+    if thermal_guard:
+        result["thermal_stats"] = {
+            "peak_temp_c": thermal_guard.peak_temp,
+            "total_cooldown_seconds": thermal_guard.total_cooldown_seconds,
+        }
+
+    return result
+
 
 def transcribe_with_whisperx(
     audio_path: Path | None,
@@ -411,6 +471,7 @@ def transcribe_with_whisperx(
     progress_callback: Optional[TranscribeProgressCallback] = None,
     transcription_mode: str | None = None,
     cache_path: Path | None = None,
+    cancel_check: Optional[Callable[[], bool]] = None,
 ) -> dict:
     """
     Prefer a real WhisperX run when available, otherwise fall back to a
@@ -459,6 +520,7 @@ def transcribe_with_whisperx(
             duration_ms=duration_ms,
             progress_callback=progress_callback,
             transcription_mode=transcription_mode,
+            cancel_check=cancel_check,
         )
     except Exception as exc:
         transcript = build_placeholder_transcript(manuscript_text, duration_ms)

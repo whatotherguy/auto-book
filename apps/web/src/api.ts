@@ -239,12 +239,31 @@ export function updateSettings(payload: {
   anthropic_api_key?: string
   llm_provider?: string
   transcription_backend?: string
+  gpu_thermal_protection?: boolean
+  gpu_temp_warning?: number
+  gpu_temp_critical?: number
+  gpu_cooldown_seconds?: number
 }) {
   return fetchJson<AppSettings>("/settings", {
     method: "PATCH",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify(payload)
   })
+}
+
+export function getGpuStatus() {
+  return fetchJson<{
+    available: boolean
+    device: string
+    compute_type: string
+    name: string | null
+    vram_gb: number | null
+    temperature_c: number | null
+    power_draw_w: number | null
+    utilization_pct: number | null
+    monitoring_available: boolean
+    thermal_protection_enabled: boolean
+  }>("/settings/gpu-status")
 }
 
 export function getSpokenTokens(chapterId: number) {

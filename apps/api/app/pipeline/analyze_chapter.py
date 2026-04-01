@@ -8,12 +8,17 @@ from ..models import AnalysisJob, Chapter
 
 logger = logging.getLogger(__name__)
 from ..services.align import build_alignment, build_manuscript_tokens, build_spoken_tokens
+from ..services.alt_takes import detect_alt_takes
 from ..services.audio import read_wav_duration_ms
+from ..services.audio_analysis import analyze_audio_signals
 from ..services.detect import build_issue_records, persist_issue_models
 from ..services.ingest import prepare_working_audio_copy, write_json_artifact
+from ..services.prosody import extract_prosody
+from ..services.signal_fusion import enrich_issues
 from ..services.storage import ensure_chapter_dirs
 from ..services.text_normalize import normalize_text
 from ..services.transcribe import transcribe_with_whisperx
+from ..services.vad import run_vad
 
 
 def set_job_progress(session: Session, job: AnalysisJob, progress: int, step: str) -> None:
@@ -100,7 +105,24 @@ def run_analysis(
         alignment = build_alignment(manuscript_tokens, spoken_tokens)
         write_json_artifact(dirs["analysis"] / "alignment.json", alignment)
 
-        set_job_progress(session, job, 80, "detect_issues")
+        # === Signal Extraction (Layer 0) ===
+        set_job_progress(session, job, 60, "audio_analysis")
+        check_cancelled()
+        audio_signals = analyze_audio_signals(working_audio_path)
+        write_json_artifact(dirs["analysis"] / "audio_signals.json", audio_signals)
+
+        set_job_progress(session, job, 63, "vad")
+        check_cancelled()
+        vad_segments = run_vad(working_audio_path)
+        write_json_artifact(dirs["analysis"] / "vad_segments.json", vad_segments)
+
+        set_job_progress(session, job, 66, "prosody")
+        check_cancelled()
+        prosody_map = extract_prosody(working_audio_path, spoken_tokens)
+        write_json_artifact(dirs["analysis"] / "prosody_features.json", prosody_map)
+
+        # === Issue Detection (extended) ===
+        set_job_progress(session, job, 70, "detect_issues")
         check_cancelled()
 
         issue_records = build_issue_records(
@@ -109,7 +131,47 @@ def run_analysis(
             manuscript_tokens=manuscript_tokens,
             spoken_tokens=spoken_tokens,
             alignment=alignment,
+            audio_signals=audio_signals,
+            vad_segments=vad_segments,
+            prosody_map=prosody_map,
         )
+
+        # === Signal Fusion (Layer 1) ===
+        set_job_progress(session, job, 74, "signal_fusion")
+        check_cancelled()
+        issue_records = enrich_issues(
+            issue_records, audio_signals, vad_segments,
+            prosody_map, spoken_tokens, manuscript_tokens, alignment,
+        )
+
+        # === Alt-Take Clustering (Layer 2) ===
+        set_job_progress(session, job, 77, "alt_take_clustering")
+        check_cancelled()
+        alt_take_clusters = detect_alt_takes(
+            issue_records, manuscript_tokens, spoken_tokens,
+            alignment, prosody_map,
+        )
+        write_json_artifact(dirs["analysis"] / "alt_take_clusters.json", alt_take_clusters)
+
+        # === Scoring Engine (Layer 3) ===
+        set_job_progress(session, job, 80, "scoring")
+        check_cancelled()
+        from ..services.scoring.pipeline import run_scoring_pipeline
+        scoring_result = run_scoring_pipeline(
+            issue_records=issue_records,
+            audio_signals=audio_signals,
+            vad_segments=vad_segments,
+            prosody_map=prosody_map,
+            manuscript_tokens=manuscript_tokens,
+            spoken_tokens=spoken_tokens,
+            alignment=alignment,
+            alt_take_clusters=alt_take_clusters,
+            chapter=chapter,
+            session=session,
+        )
+        issue_records = scoring_result["enriched_issues"]
+        alt_take_clusters = scoring_result["alt_take_clusters"]
+        write_json_artifact(dirs["analysis"] / "scoring_result.json", scoring_result)
 
         # Optional LLM triage to filter false positives
         if enable_llm_triage:
@@ -126,6 +188,7 @@ def run_analysis(
         write_json_artifact(dirs["analysis"] / "issues.json", issue_records)
 
         persist_issue_models(session, chapter.id, issue_records)
+        _persist_signal_data(session, chapter.id, audio_signals, vad_segments, alt_take_clusters, scoring_result)
 
         chapter.status = "review"
         session.add(chapter)
@@ -144,3 +207,80 @@ def run_analysis(
             session.add(chapter)
             session.add(job)
             session.commit()
+
+
+def _persist_signal_data(
+    session: Session,
+    chapter_id: int,
+    audio_signals: list,
+    vad_segments: list,
+    alt_take_clusters: list,
+    scoring_result: dict,
+) -> None:
+    """Persist audio signals, VAD segments, alt-take clusters, and scoring results."""
+    from ..models import AudioSignal, VadSegment, AltTakeCluster, AltTakeMember, ScoringResult
+    import json
+
+    # Persist audio signals
+    for sig in audio_signals:
+        session.add(AudioSignal(
+            chapter_id=chapter_id,
+            signal_type=sig.get("signal_type", ""),
+            start_ms=sig.get("start_ms", 0),
+            end_ms=sig.get("end_ms", 0),
+            confidence=sig.get("confidence", 0.0),
+            rms_db=sig.get("rms_db"),
+            spectral_centroid_hz=sig.get("spectral_centroid_hz"),
+            zero_crossing_rate=sig.get("zero_crossing_rate"),
+            onset_strength=sig.get("onset_strength"),
+            bandwidth_hz=sig.get("bandwidth_hz"),
+            note=sig.get("note"),
+        ))
+
+    # Persist VAD segments
+    for seg in vad_segments:
+        session.add(VadSegment(
+            chapter_id=chapter_id,
+            start_ms=seg.get("start_ms", 0),
+            end_ms=seg.get("end_ms", 0),
+            speech_probability=seg.get("speech_probability", 0.0),
+        ))
+
+    # Persist alt-take clusters
+    for cluster in alt_take_clusters:
+        db_cluster = AltTakeCluster(
+            chapter_id=chapter_id,
+            manuscript_start_idx=cluster.get("manuscript_start_idx", 0),
+            manuscript_end_idx=cluster.get("manuscript_end_idx", 0),
+            manuscript_text=cluster.get("manuscript_text", ""),
+            preferred_issue_id=cluster.get("preferred_issue_id"),
+            confidence=cluster.get("confidence", 0.0),
+        )
+        session.add(db_cluster)
+        session.flush()
+        for member in cluster.get("members", []):
+            session.add(AltTakeMember(
+                cluster_id=db_cluster.id,
+                issue_id=member.get("issue_id", 0),
+                take_order=member.get("take_order", 0),
+            ))
+
+    # Persist scoring results
+    for envelope in scoring_result.get("envelopes", []):
+        session.add(ScoringResult(
+            issue_id=envelope.get("issue_id", 0),
+            chapter_id=chapter_id,
+            scoring_version=envelope.get("scoring_version", "1.0.0"),
+            composite_scores_json=json.dumps(envelope.get("composite_scores", {})),
+            detector_outputs_json=json.dumps(envelope.get("detector_outputs", {})),
+            recommendation_json=json.dumps(envelope.get("recommendation", {})),
+            derived_features_json=json.dumps(envelope.get("derived_features", {})),
+            mistake_score=envelope.get("mistake_score", 0.0),
+            pickup_score=envelope.get("pickup_score", 0.0),
+            performance_score=envelope.get("performance_score", 0.0),
+            splice_score=envelope.get("splice_score", 0.0),
+            priority=envelope.get("priority", "info"),
+            baseline_id=envelope.get("baseline_id", ""),
+        ))
+
+    session.commit()

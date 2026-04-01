@@ -25,6 +25,134 @@ export type Chapter = {
 
 export type IssueStatus = "approved" | "rejected" | "needs_manual"
 
+export type AudioFeatures = {
+  rms_db: number
+  rms_db_contour: number[]
+  spectral_centroid_hz: number
+  zero_crossing_rate: number
+  onset_strength_max: number
+  onset_strength_mean: number
+  bandwidth_hz: number
+  crest_factor: number
+}
+
+export type ProsodyFeatures = {
+  duration_ms: number
+  speech_rate_wps: number
+  f0_mean_hz: number | null
+  f0_std_hz: number | null
+  f0_contour: number[]
+  energy_contour: number[]
+  pause_before_ms: number
+  pause_after_ms: number
+}
+
+export type AudioSignals = {
+  has_click_marker: boolean
+  click_marker_confidence: number
+  has_abrupt_cutoff: boolean
+  has_silence_gap: boolean
+  silence_gap_ms: number
+  has_onset_burst: boolean
+  restart_pattern_detected: boolean
+}
+
+export type DetectorOutput = {
+  detector_name: string
+  score: number
+  confidence: number
+  reasons: string[]
+  features_used: Record<string, number | string | boolean>
+  triggered: boolean
+}
+
+export type ScoredResult = {
+  score: number
+  confidence: number
+  components: Record<string, number>
+  reasons: string[]
+  ambiguity_flags: string[]
+}
+
+export type CompositeScores = {
+  mistake_candidate: ScoredResult
+  pickup_candidate: ScoredResult
+  performance_quality: ScoredResult
+  continuity_fit: ScoredResult
+  splice_readiness: ScoredResult
+}
+
+export type EditorialRecommendation = {
+  action: 'review_mistake' | 'likely_pickup' | 'alt_take_available'
+        | 'safe_auto_cut' | 'manual_review_required' | 'no_action'
+  priority: 'critical' | 'high' | 'medium' | 'low' | 'info'
+  reasoning: string
+  confidence: number
+  related_issue_ids: number[]
+}
+
+export type RankedTake = {
+  issue_id: number | null
+  issue_index: number
+  rank: number
+  total_score: number
+  performance_quality: number
+  continuity_fit: number
+  text_accuracy: number
+  splice_readiness: number
+  reasons: string[]
+}
+
+export type TakeRanking = {
+  cluster_id: string
+  ranked_takes: RankedTake[]
+  preferred_take_issue_id: number | null
+  selection_reasons: string[]
+  confidence: number
+}
+
+export type AudioSignalRecord = {
+  id: number
+  chapter_id: number
+  signal_type: 'click_marker' | 'abrupt_cutoff' | 'silence_gap' | 'onset_burst'
+  start_ms: number
+  end_ms: number
+  confidence: number
+  rms_db: number | null
+  spectral_centroid_hz: number | null
+  zero_crossing_rate: number | null
+  onset_strength: number | null
+  bandwidth_hz: number | null
+  note: string | null
+}
+
+export type VadSegmentRecord = {
+  id: number
+  chapter_id: number
+  start_ms: number
+  end_ms: number
+  speech_probability: number
+}
+
+export type AltTakeCluster = {
+  id: number
+  chapter_id: number
+  manuscript_start_idx: number
+  manuscript_end_idx: number
+  manuscript_text: string
+  preferred_issue_id: number | null
+  confidence: number
+  members: AltTakeMember[]
+  ranking?: TakeRanking | null
+}
+
+export type AltTakeMember = {
+  id: number
+  cluster_id: number
+  issue_id: number
+  take_order: number
+}
+
 export type Issue = {
   id: number
   chapter_id: number
@@ -40,7 +168,18 @@ export type Issue = {
   status: IssueStatus
   triage_verdict?: string | null
   triage_reason?: string | null
+  audio_features?: AudioFeatures | null
+  audio_signals?: AudioSignals | null
+  prosody_features?: ProsodyFeatures | null
+  alt_take_cluster_id?: number | null
+  composite_scores?: CompositeScores | null
+  recommendation?: EditorialRecommendation | null
 }
+
+export type IssueType =
+  | 'false_start' | 'repetition' | 'pickup_restart' | 'substitution'
+  | 'missing_text' | 'long_pause' | 'uncertain_alignment'
+  | 'pickup_candidate' | 'alt_take' | 'performance_variant' | 'non_speech_marker'
 
 export type AnalysisJob = {
   id: number

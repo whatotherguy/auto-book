@@ -9,7 +9,7 @@ from sqlmodel import Session, delete, select
 
 from ..db import get_session
 from ..jobs import start_analysis_job
-from ..models import AnalysisJob, Chapter, Issue, Project
+from ..models import AltTakeCluster, AltTakeMember, AnalysisJob, AudioSignal, Chapter, Issue, Project, ScoringResult, VadSegment
 from ..schemas import AnalyzeChapterRequest, AnalyzeResponse, ChapterCreate, ChapterTextUpdate
 from ..services.audio import read_wav_duration_ms
 from ..services.manuscript import extract_text_from_manuscript_file
@@ -333,3 +333,117 @@ def analyze_chapter(
     start_analysis_job(job.id, transcription_mode=payload.transcription_mode, force_retranscribe=payload.force_retranscribe, enable_llm_triage=payload.enable_llm_triage)
 
     return AnalyzeResponse(job_id=job.id, status=job.status)
+
+
+@router.get("/chapters/{chapter_id}/audio-signals")
+def get_audio_signals(chapter_id: int, session: Session = Depends(get_session)):
+    chapter = session.get(Chapter, chapter_id)
+    if not chapter:
+        raise HTTPException(status_code=404, detail="Chapter not found")
+    signals = session.exec(
+        select(AudioSignal).where(AudioSignal.chapter_id == chapter_id)
+    ).all()
+    return [s.model_dump() for s in signals]
+
+
+@router.get("/chapters/{chapter_id}/vad-segments")
+def get_vad_segments(chapter_id: int, session: Session = Depends(get_session)):
+    chapter = session.get(Chapter, chapter_id)
+    if not chapter:
+        raise HTTPException(status_code=404, detail="Chapter not found")
+    segments = session.exec(
+        select(VadSegment).where(VadSegment.chapter_id == chapter_id)
+    ).all()
+    return [s.model_dump() for s in segments]
+
+
+@router.get("/chapters/{chapter_id}/alt-take-clusters")
+def get_alt_take_clusters(chapter_id: int, session: Session = Depends(get_session)):
+    chapter = session.get(Chapter, chapter_id)
+    if not chapter:
+        raise HTTPException(status_code=404, detail="Chapter not found")
+    clusters = session.exec(
+        select(AltTakeCluster).where(AltTakeCluster.chapter_id == chapter_id)
+    ).all()
+    result = []
+    for cluster in clusters:
+        members = session.exec(
+            select(AltTakeMember).where(AltTakeMember.cluster_id == cluster.id)
+        ).all()
+        cluster_dict = cluster.model_dump()
+        cluster_dict["members"] = [m.model_dump() for m in members]
+
+        # Load ranking from scoring_result artifact if available
+        scoring_results = session.exec(
+            select(ScoringResult).where(ScoringResult.chapter_id == chapter_id)
+        ).all()
+        cluster_dict["ranking"] = None
+
+        result.append(cluster_dict)
+    return result
+
+
+@router.patch("/alt-take-clusters/{cluster_id}/preferred")
+def set_preferred_take(
+    cluster_id: int,
+    payload: dict,
+    session: Session = Depends(get_session),
+):
+    cluster = session.get(AltTakeCluster, cluster_id)
+    if not cluster:
+        raise HTTPException(status_code=404, detail="Alt-take cluster not found")
+
+    preferred_issue_id = payload.get("preferred_issue_id")
+    if preferred_issue_id is None:
+        raise HTTPException(status_code=400, detail="preferred_issue_id required")
+
+    issue = session.get(Issue, preferred_issue_id)
+    if not issue:
+        raise HTTPException(status_code=404, detail="Issue not found")
+
+    cluster.preferred_issue_id = preferred_issue_id
+    session.add(cluster)
+
+    # Update statuses: preferred -> rejected (keep in output), others -> approved (cut)
+    members = session.exec(
+        select(AltTakeMember).where(AltTakeMember.cluster_id == cluster_id)
+    ).all()
+    for member in members:
+        member_issue = session.get(Issue, member.issue_id)
+        if member_issue:
+            if member.issue_id == preferred_issue_id:
+                member_issue.status = "rejected"
+            else:
+                member_issue.status = "approved"
+            session.add(member_issue)
+
+    session.commit()
+    session.refresh(cluster)
+    return cluster.model_dump()
+
+
+@router.get("/chapters/{chapter_id}/scoring-summary")
+def get_scoring_summary(chapter_id: int, session: Session = Depends(get_session)):
+    chapter = session.get(Chapter, chapter_id)
+    if not chapter:
+        raise HTTPException(status_code=404, detail="Chapter not found")
+
+    results = session.exec(
+        select(ScoringResult).where(ScoringResult.chapter_id == chapter_id)
+    ).all()
+
+    envelopes = [r.model_dump() for r in results]
+
+    # Load baseline from artifact if available
+    dirs = ensure_chapter_dirs(chapter.project_id, chapter.chapter_number)
+    baseline_path = dirs["analysis"] / "scoring_result.json"
+    baseline_stats = {}
+    if baseline_path.exists():
+        try:
+            import json as _json
+            data = _json.loads(baseline_path.read_text(encoding="utf-8"))
+            baseline_stats = data.get("baseline", {})
+        except Exception:
+            pass
+
+    return {"envelopes": envelopes, "baseline_stats": baseline_stats}

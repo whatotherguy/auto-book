@@ -5,9 +5,16 @@ FastAPI backend for Audiobook Editor.
 ## Responsibilities
 - project/chapter CRUD
 - uploads
-- analysis jobs
+- analysis jobs (transcription, alignment, signal extraction, scoring)
+- audio signal analysis (RMS, ZCR, spectral centroid, click/cutoff detection)
+- VAD speech boundary detection (Silero VAD)
+- prosody extraction (F0/pitch, speech rate, energy contour)
+- signal fusion and enrichment
+- alt-take clustering and ranking
+- heuristic scoring engine (15 detectors, 5 composites, recommendations)
+- calibration system (Monte Carlo weight tuning)
 - issue storage
-- exports
+- exports (CSV with scoring data, JSON, edited WAV with auto-approve)
 
 ## Run
 ```bash

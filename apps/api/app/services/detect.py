@@ -539,6 +539,9 @@ def build_issue_records(
     manuscript_tokens: Sequence[TokenLike],
     spoken_tokens: Sequence[TokenLike],
     alignment: dict[str, Any],
+    audio_signals: list[dict[str, Any]] | None = None,
+    vad_segments: list[dict[str, Any]] | None = None,
+    prosody_map: list[dict[str, Any]] | None = None,
 ) -> list[dict[str, Any]]:
     issues = detect_alignment_issues(manuscript_tokens, spoken_tokens, alignment)
     for issue in issues:
@@ -551,19 +554,25 @@ def persist_issue_models(session: Session, chapter_id: int, issue_records: Seque
     for issue_record in issue_records:
         confidence = float(issue_record.get("confidence", 0.0))
         status = str(issue_record.get("status") or _default_issue_status(confidence))
-        session.add(
-            Issue(
-                chapter_id=chapter_id,
-                type=str(issue_record.get("type", "uncertain_alignment")),
-                start_ms=int(issue_record.get("start_ms", 0)),
-                end_ms=int(issue_record.get("end_ms", 0)),
-                confidence=confidence,
-                expected_text=str(issue_record.get("expected_text", "")),
-                spoken_text=str(issue_record.get("spoken_text", "")),
-                context_before=str(issue_record.get("context_before", "")),
-                context_after=str(issue_record.get("context_after", "")),
-                note=issue_record.get("note"),
-                status=status,
-            )
+        issue = Issue(
+            chapter_id=chapter_id,
+            type=str(issue_record.get("type", "uncertain_alignment")),
+            start_ms=int(issue_record.get("start_ms", 0)),
+            end_ms=int(issue_record.get("end_ms", 0)),
+            confidence=confidence,
+            expected_text=str(issue_record.get("expected_text", "")),
+            spoken_text=str(issue_record.get("spoken_text", "")),
+            context_before=str(issue_record.get("context_before", "")),
+            context_after=str(issue_record.get("context_after", "")),
+            note=issue_record.get("note"),
+            status=status,
+            audio_features_json=issue_record.get("audio_features_json"),
+            audio_signals_json=issue_record.get("audio_signals_json"),
+            prosody_features_json=issue_record.get("prosody_features_json"),
+            alt_take_cluster_id=issue_record.get("alt_take_cluster_id"),
         )
+        session.add(issue)
+        # Store the DB id back on the record for downstream use
+        session.flush()
+        issue_record["id"] = issue.id
     session.commit()

@@ -1,4 +1,4 @@
-import { Issue } from "../types"
+import { AudioSignalRecord, Issue, VadSegmentRecord } from "../types"
 import { getConfidenceBand, getIssueTypeMeta, humanize, ISSUE_TYPE_META } from "../utils"
 import { CollapsibleSection } from "./CollapsibleSection"
 import type { CSSProperties } from "react"
@@ -22,12 +22,16 @@ export function IssueTimeline({
   durationMs,
   onSelect,
   playheadMs = 0,
+  audioSignals = [],
+  vadSegments = [],
 }: {
   issues: Issue[]
   selectedIssueId: number | null
   durationMs: number
   onSelect: (issue: Issue) => void
   playheadMs?: number
+  audioSignals?: AudioSignalRecord[]
+  vadSegments?: VadSegmentRecord[]
 }) {
   const safeDurationMs = Math.max(
     durationMs,
@@ -62,6 +66,35 @@ export function IssueTimeline({
               style={{ left: `${Math.min(100, (playheadMs / safeDurationMs) * 100)}%` }}
             />
           ) : null}
+          {/* VAD gap overlays */}
+          {vadSegments.length > 1 ? vadSegments.slice(0, -1).map((seg, i) => {
+            const nextSeg = vadSegments[i + 1]
+            if (!nextSeg || nextSeg.start_ms - seg.end_ms < 200) return null
+            const gapStart = Math.max(0, (seg.end_ms / safeDurationMs) * 100)
+            const gapEnd = Math.min(100, (nextSeg.start_ms / safeDurationMs) * 100)
+            return (
+              <div
+                key={`vad-gap-${i}`}
+                className="timeline-vad-gap"
+                style={{ left: `${gapStart}%`, width: `${gapEnd - gapStart}%`, position: "absolute", top: 0, bottom: 0, background: "rgba(150,150,150,0.15)", pointerEvents: "none" }}
+              />
+            )
+          }) : null}
+          {/* Audio signal markers */}
+          {audioSignals.map((sig, i) => {
+            const pos = Math.max(0, Math.min(100, (sig.start_ms / safeDurationMs) * 100))
+            const style: CSSProperties = { position: "absolute", left: `${pos}%`, top: 0, height: "100%", pointerEvents: "none", zIndex: 2 }
+            if (sig.signal_type === "click_marker") {
+              return <div key={`sig-${i}`} style={{ ...style, width: 6, height: 6, top: "50%", marginTop: -3, background: "#d97706", borderRadius: "50%", transform: "rotate(45deg)" }} title="Click marker" />
+            }
+            if (sig.signal_type === "abrupt_cutoff") {
+              return <div key={`sig-${i}`} style={{ ...style, width: 2, borderLeft: "2px dashed #dc2626" }} title="Abrupt cutoff" />
+            }
+            if (sig.signal_type === "onset_burst") {
+              return <div key={`sig-${i}`} style={{ ...style, width: 1, borderLeft: "1px dotted #7c3aed" }} title="Punch-in point" />
+            }
+            return null
+          })}
           {issues.map((issue) => {
             const startPercent = Math.max(0, Math.min(100, (issue.start_ms / safeDurationMs) * 100))
             const endPercent = Math.max(startPercent, Math.min(100, (issue.end_ms / safeDurationMs) * 100))

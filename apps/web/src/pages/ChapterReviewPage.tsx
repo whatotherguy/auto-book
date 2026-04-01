@@ -1,17 +1,21 @@
-import { ChangeEvent, useEffect, useMemo, useRef, useState } from "react"
+import { ChangeEvent, useCallback, useEffect, useMemo, useRef, useState } from "react"
 import {
   analyzeChapter,
   cancelJob,
   getAcxCheck,
+  getAltTakeClusters,
+  getAudioSignals,
   getHealth,
   getLatestAnalysisJob,
   getJob,
   getSettings,
+  getVadSegments,
   downloadChapterExport,
   downloadEditedChapterAudio,
   getChapter,
   getChapterAudioUrl,
   getIssues,
+  setPreferredTake,
   startAutoEditJob,
   runAcxCheck,
   updateIssue,
@@ -28,15 +32,31 @@ import { SettingsPanel } from "../components/SettingsPanel"
 import { Tooltip } from "../components/Tooltip"
 import { KeyboardShortcutOverlay } from "../components/KeyboardShortcutOverlay"
 import { WaveformPanel } from "../components/WaveformPanel"
-import { AcxCheck, AnalysisJob, AppSettings, Chapter, GpuInfo, Issue, IssueStatus, TranscriptionMode } from "../types"
+import { Breadcrumb } from "../components/Breadcrumb"
+import { TriageProgress } from "../components/TriageProgress"
+import { ConfirmModal } from "../components/ConfirmModal"
+import { UndoToast, nextToastId } from "../components/UndoToast"
+import type { UndoToastData } from "../components/UndoToast"
+import { SkeletonTimeline } from "../components/Skeleton"
+import { AltTakeCluster, AcxCheck, AnalysisJob, AppSettings, AudioSignalRecord, Chapter, GpuInfo, Issue, IssueStatus, TranscriptionMode, VadSegmentRecord } from "../types"
+import { AltTakesPanel } from "../components/AltTakesPanel"
 import { ConfidenceFilter, ISSUE_TYPE_META } from "../utils"
+import { cachedFetch, cacheInvalidate } from "../cache"
+
+const ONBOARDING_KEY = "ab:onboarding-shortcuts-dismissed"
 
 export function ChapterReviewPage({
   chapterId,
-  onBack
+  projectId,
+  projectName,
+  onBack,
+  onBackToProjects,
 }: {
   chapterId: number
+  projectId?: number | null
+  projectName?: string | null
   onBack: () => void
+  onBackToProjects?: () => void
 }) {
   const [chapter, setChapter] = useState<Chapter | null>(null)
   const [issues, setIssues] = useState<Issue[]>([])
@@ -64,6 +84,23 @@ export function ChapterReviewPage({
   const [enableLlmTriage, setEnableLlmTriage] = useState(true)
   const [spokenTokens, setSpokenTokens] = useState<any[]>([])
   const [playbackTimeMs, setPlaybackTimeMs] = useState(0)
+  const [audioSignals, setAudioSignals] = useState<AudioSignalRecord[]>([])
+  const [vadSegments, setVadSegments] = useState<VadSegmentRecord[]>([])
+  const [altTakeClusters, setAltTakeClusters] = useState<AltTakeCluster[]>([])
+  const [actionsOpen, setActionsOpen] = useState(false)
+  const [showOnboarding, setShowOnboarding] = useState(() => !localStorage.getItem(ONBOARDING_KEY))
+  const [undoToast, setUndoToast] = useState<UndoToastData | null>(null)
+
+  // Confirm modal state
+  const [confirmModal, setConfirmModal] = useState<{
+    open: boolean
+    title: string
+    message: string
+    confirmLabel: string
+    variant: "danger" | "default"
+    onConfirm: () => void
+  }>({ open: false, title: "", message: "", confirmLabel: "Confirm", variant: "default", onConfirm: () => {} })
+
   const replacementAudioInputRef = useRef<HTMLInputElement | null>(null)
   const autoEditDownloadTriggeredRef = useRef(false)
   const issuesRef = useRef(issues)
@@ -75,11 +112,19 @@ export function ChapterReviewPage({
   )
 
   useEffect(() => {
-    void getHealth().then((h) => setGpuInfo(h.gpu)).catch(() => {})
-    void getSettings().then(setAppSettings).catch(() => {})
+    void cachedFetch("health", getHealth, 60_000).then((h) => setGpuInfo(h.gpu)).catch(() => {})
+    void cachedFetch("settings", getSettings, 60_000).then(setAppSettings).catch(() => {})
   }, [])
   useEffect(() => { issuesRef.current = issues }, [issues])
   useEffect(() => { selectedIssueRef.current = selectedIssue }, [selectedIssue])
+
+  function showConfirm(opts: { title: string; message: string; confirmLabel: string; variant?: "danger" | "default"; onConfirm: () => void }) {
+    setConfirmModal({ open: true, variant: "default", ...opts })
+  }
+
+  function closeConfirm() {
+    setConfirmModal((prev) => ({ ...prev, open: false }))
+  }
 
   async function loadChapter(options?: { showLoading?: boolean }) {
     const showLoading = options?.showLoading ?? true
@@ -97,8 +142,11 @@ export function ChapterReviewPage({
         getLatestAnalysisJob(chapterId, "analyze_chapter").catch(() => null),
         getLatestAnalysisJob(chapterId, "export_edited_wav").catch(() => null)
       ])
-      // After the main Promise.all, fetch spoken tokens for follow-along
+      // After the main Promise.all, fetch spoken tokens and signal data
       getSpokenTokens(chapterId).then(setSpokenTokens).catch(() => setSpokenTokens([]))
+      getAudioSignals(chapterId).then(setAudioSignals).catch(() => setAudioSignals([]))
+      getVadSegments(chapterId).then(setVadSegments).catch(() => setVadSegments([]))
+      getAltTakeClusters(chapterId).then(setAltTakeClusters).catch(() => setAltTakeClusters([]))
 
       setChapter(nextChapter)
       setTranscriptionMode((currentMode) => {
@@ -141,13 +189,14 @@ export function ChapterReviewPage({
 
     async function refreshAnalysisJob() {
       try {
-        const nextJob = await getJob(analysisJob.id)
+        const nextJob = await getJob(analysisJob!.id)
         if (!active) {
           return
         }
 
         setAnalysisJob(nextJob)
         if (nextJob.status === "completed") {
+          cacheInvalidate(`chapter:${chapterId}`)
           void loadChapter({ showLoading: false })
         }
       } catch {
@@ -175,7 +224,7 @@ export function ChapterReviewPage({
 
     async function refreshAutoEditJob() {
       try {
-        const nextJob = await getJob(autoEditJob.id)
+        const nextJob = await getJob(autoEditJob!.id)
         if (!active) {
           return
         }
@@ -274,6 +323,7 @@ export function ChapterReviewPage({
       setUploadProgress(0)
       setError(null)
       await uploadChapterAudioWithProgress(chapterId, file, setUploadProgress)
+      cacheInvalidate(`chapter:${chapterId}`)
       await loadChapter({ showLoading: false })
     } catch (nextError) {
       setError(nextError instanceof Error ? nextError.message : "Failed to replace chapter WAV.")
@@ -374,24 +424,35 @@ export function ChapterReviewPage({
       return true
     })
     if (targetIssues.length === 0) return
-    if (!window.confirm(`${status === "approved" ? "Approve" : status === "rejected" ? "Reject" : "Mark for review"} ${targetIssues.length} issues?`)) return
 
-    try {
-      setIsBatchUpdating(true)
-      setError(null)
-      const updated = await Promise.all(targetIssues.map((issue) => updateIssue(issue.id, { status })))
-      setIssues((current) => {
-        const updatedMap = new Map(updated.map((u) => [u.id, u]))
-        return current.map((issue) => updatedMap.get(issue.id) ?? issue)
-      })
-    } catch (nextError) {
-      setError(nextError instanceof Error ? nextError.message : "Failed to batch update issues.")
-    } finally {
-      setIsBatchUpdating(false)
-    }
+    const actionLabel = status === "approved" ? "Approve" : status === "rejected" ? "Reject" : "Mark for review"
+
+    showConfirm({
+      title: `${actionLabel} ${targetIssues.length} issues?`,
+      message: `This will ${actionLabel.toLowerCase()} all ${targetIssues.length} issues matching the current filters.`,
+      confirmLabel: actionLabel,
+      variant: status === "rejected" ? "danger" : "default",
+      onConfirm: async () => {
+        closeConfirm()
+        try {
+          setIsBatchUpdating(true)
+          setError(null)
+          const updated = await Promise.all(targetIssues.map((issue) => updateIssue(issue.id, { status })))
+          setIssues((current) => {
+            const updatedMap = new Map(updated.map((u) => [u.id, u]))
+            return current.map((issue) => updatedMap.get(issue.id) ?? issue)
+          })
+        } catch (nextError) {
+          setError(nextError instanceof Error ? nextError.message : "Failed to batch update issues.")
+        } finally {
+          setIsBatchUpdating(false)
+        }
+      },
+    })
   }
 
-  async function handleIssueStatusChange(issue: Issue, status: IssueStatus) {
+  const handleIssueStatusChange = useCallback(async function handleIssueStatusChange(issue: Issue, status: IssueStatus) {
+    const previousStatus = issue.status
     try {
       setError(null)
       const updatedIssue = await updateIssue(issue.id, { status })
@@ -399,9 +460,37 @@ export function ChapterReviewPage({
         currentIssues.map((currentIssue) => (currentIssue.id === updatedIssue.id ? updatedIssue : currentIssue))
       )
       setSelectedIssueId(updatedIssue.id)
+
+      // Show undo toast
+      const label = status === "approved" ? "Approved" : status === "rejected" ? "Rejected" : "Marked for review"
+      setUndoToast({
+        id: nextToastId(),
+        message: `${label} issue #${issue.id}`,
+        onUndo: async () => {
+          try {
+            const reverted = await updateIssue(issue.id, { status: previousStatus })
+            setIssues((currentIssues) =>
+              currentIssues.map((ci) => (ci.id === reverted.id ? reverted : ci))
+            )
+          } catch {
+            // Best effort
+          }
+        },
+      })
     } catch (nextError) {
       setError(nextError instanceof Error ? nextError.message : "Failed to update issue.")
     }
+  }, [])
+
+  function handleNoteUpdated(updated: Issue) {
+    setIssues((currentIssues) =>
+      currentIssues.map((ci) => (ci.id === updated.id ? updated : ci))
+    )
+  }
+
+  function dismissOnboarding() {
+    setShowOnboarding(false)
+    localStorage.setItem(ONBOARDING_KEY, "1")
   }
 
   const canAnalyze = Boolean(chapter?.has_audio && chapter?.raw_text?.trim())
@@ -409,11 +498,25 @@ export function ChapterReviewPage({
   const isAnalysisRunning = isAnalyzing || analysisJob?.status === "queued" || analysisJob?.status === "running"
   const isAutoEditRunning = isAutoEditing || autoEditJob?.status === "queued" || autoEditJob?.status === "running"
 
+  // Breadcrumb items
+  const breadcrumbItems = useMemo(() => {
+    const items: { label: string; onClick?: () => void }[] = [
+      { label: "Projects", onClick: onBackToProjects },
+    ]
+    if (projectName || projectId) {
+      items.push({ label: projectName ?? `Project ${projectId}`, onClick: onBack })
+    }
+    items.push({
+      label: chapter?.title
+        ? `Chapter ${chapter.chapter_number}: ${chapter.title}`
+        : `Chapter ${chapter?.chapter_number ?? chapterId}`,
+    })
+    return items
+  }, [projectName, projectId, chapter, chapterId, onBack, onBackToProjects])
+
   return (
     <div className="page app-shell review-page">
-      <button type="button" onClick={onBack}>
-        Back to Project
-      </button>
+      <Breadcrumb items={breadcrumbItems} />
 
       <div className="page-hero review-hero">
         <p className="eyebrow">Chapter Review</p>
@@ -435,6 +538,21 @@ export function ChapterReviewPage({
           {error}
         </div>
       ) : null}
+
+      {/* Onboarding hint */}
+      {showOnboarding && !loading && issues.length > 0 ? (
+        <div className="onboarding-hint">
+          <span>
+            Navigate issues with <kbd>J</kbd> / <kbd>K</kbd>, approve with <kbd>A</kbd>, reject with <kbd>R</kbd>, play/pause with <kbd>Space</kbd>
+          </span>
+          <button type="button" className="onboarding-hint-dismiss" onClick={dismissOnboarding}>
+            Dismiss
+          </button>
+        </div>
+      ) : null}
+
+      {/* Triage progress */}
+      <TriageProgress issues={issues} />
 
       <div className="card review-toolbar">
         <div className="review-filter-bar">
@@ -470,7 +588,7 @@ export function ChapterReviewPage({
           <div className="review-toolbar-fields">
             <label htmlFor="confidence-filter">
               Confidence
-              <Tooltip text="High (≥85%) = likely real. Low (<65%) = may be artifact."><span className="muted"> (?)</span></Tooltip>
+              <Tooltip text="High (>=85%) = likely real. Low (<65%) = may be artifact."><span className="muted"> (?)</span></Tooltip>
             </label>
             <select id="confidence-filter" value={confidenceFilter} onChange={(event) => setConfidenceFilter(event.target.value as ConfidenceFilter)}>
               <option value="all">All levels</option>
@@ -513,30 +631,6 @@ export function ChapterReviewPage({
           </div>
 
           <div className="action-group">
-            <button type="button" onClick={() => void handleExport("csv")} disabled={isExportingCsv}>
-              {isExportingCsv ? "CSV..." : "CSV"}
-            </button>
-            <button type="button" onClick={() => void handleExport("json")} disabled={isExportingJson}>
-              {isExportingJson ? "JSON..." : "JSON"}
-            </button>
-            <button type="button" onClick={handleAutoEdit} disabled={isAutoEditRunning || !hasAudio}>
-              {isAutoEditRunning ? <><span className="progress-ring" />Exporting...</> : "Auto Edit"}
-            </button>
-            {isAutoEditRunning ? (
-              <button type="button" className="danger-button" onClick={() => void handleCancelJob(autoEditJob, setAutoEditJob)}>Cancel</button>
-            ) : null}
-          </div>
-
-          <div className="action-group">
-            <button type="button" onClick={() => void handleBatchStatusChange("approved", { type: typeFilter, confidence: confidenceFilter, search: searchQuery })} disabled={isBatchUpdating || issues.length === 0}>
-              {isBatchUpdating ? "..." : "Approve Filtered"}
-            </button>
-            <button type="button" onClick={() => void handleBatchStatusChange("rejected", { type: typeFilter, confidence: confidenceFilter, search: searchQuery })} disabled={isBatchUpdating || issues.length === 0}>
-              Reject Filtered
-            </button>
-          </div>
-
-          <div className="action-group">
             <label className="toggle-row">
               <input type="checkbox" checked={forceRetranscribe} onChange={(e) => setForceRetranscribe(e.target.checked)} disabled={isAnalysisRunning} />
               <span>Re-transcribe</span>
@@ -546,16 +640,58 @@ export function ChapterReviewPage({
               <span>AI triage{!appSettings?.triage_available ? " (no key)" : ""}</span>
             </label>
           </div>
+
+          <div className="action-group">
+            <button
+              type="button"
+              className="toolbar-actions-toggle"
+              onClick={() => setActionsOpen(!actionsOpen)}
+            >
+              {actionsOpen ? "Hide Actions" : "More Actions"}
+            </button>
+          </div>
+        </div>
+
+        <div className={`toolbar-actions-drawer ${actionsOpen ? "open" : ""}`}>
+          <div className="action-group">
+            <button type="button" onClick={() => void handleExport("csv")} disabled={isExportingCsv}>
+              {isExportingCsv ? "CSV..." : "Export CSV"}
+            </button>
+            <button type="button" onClick={() => void handleExport("json")} disabled={isExportingJson}>
+              {isExportingJson ? "JSON..." : "Export JSON"}
+            </button>
+            <button type="button" onClick={handleAutoEdit} disabled={isAutoEditRunning || !hasAudio}>
+              {isAutoEditRunning ? <><span className="progress-ring" />Exporting...</> : "Auto Edit WAV"}
+            </button>
+            {isAutoEditRunning ? (
+              <button type="button" className="danger-button" onClick={() => void handleCancelJob(autoEditJob, setAutoEditJob)}>Cancel</button>
+            ) : null}
+          </div>
+
+          <div className="action-group">
+            <button type="button" className="approve-button" onClick={() => void handleBatchStatusChange("approved", { type: typeFilter, confidence: confidenceFilter, search: searchQuery })} disabled={isBatchUpdating || issues.length === 0}>
+              {isBatchUpdating ? "..." : "Approve Filtered"}
+            </button>
+            <button type="button" className="reject-button" onClick={() => void handleBatchStatusChange("rejected", { type: typeFilter, confidence: confidenceFilter, search: searchQuery })} disabled={isBatchUpdating || issues.length === 0}>
+              Reject Filtered
+            </button>
+          </div>
         </div>
       </div>
 
-      <IssueTimeline
-        issues={issues}
-        selectedIssueId={selectedIssueId}
-        durationMs={chapter?.duration_ms ?? 0}
-        onSelect={(issue) => setSelectedIssueId(issue.id)}
-        playheadMs={playbackTimeMs}
-      />
+      {loading ? (
+        <SkeletonTimeline />
+      ) : (
+        <IssueTimeline
+          issues={issues}
+          selectedIssueId={selectedIssueId}
+          durationMs={chapter?.duration_ms ?? 0}
+          onSelect={(issue) => setSelectedIssueId(issue.id)}
+          playheadMs={playbackTimeMs}
+          audioSignals={audioSignals}
+          vadSegments={vadSegments}
+        />
+      )}
 
       <WaveformPanel
         audioUrl={chapter ? getChapterAudioUrl(chapter.id, chapter.analysis_artifact_updated_at) : null}
@@ -577,11 +713,28 @@ export function ChapterReviewPage({
             searchQuery={searchQuery}
             typeFilter={typeFilter}
             confidenceFilter={confidenceFilter}
+            loading={loading}
           />
         </div>
 
         <div className="review-column">
-          <IssueDetail issue={selectedIssue} onStatusChange={handleIssueStatusChange} />
+          <IssueDetail
+            issue={selectedIssue}
+            onStatusChange={handleIssueStatusChange}
+            onNoteUpdated={handleNoteUpdated}
+          />
+
+          {altTakeClusters.length > 0 ? (
+            <AltTakesPanel
+              clusters={altTakeClusters}
+              issues={issues}
+              onSelectPreferred={async (clusterId, issueId) => {
+                await setPreferredTake(clusterId, issueId)
+                void loadChapter({ showLoading: false })
+              }}
+              onSelectIssue={(issue) => setSelectedIssueId(issue.id)}
+            />
+          ) : null}
 
           <ManuscriptPanel text={chapter?.raw_text ?? ""} />
 
@@ -625,7 +778,18 @@ export function ChapterReviewPage({
           <SettingsPanel settings={appSettings} onUpdate={setAppSettings} />
         </div>
       </div>
+
       <KeyboardShortcutOverlay />
+      <UndoToast toast={undoToast} onDismiss={() => setUndoToast(null)} />
+      <ConfirmModal
+        open={confirmModal.open}
+        title={confirmModal.title}
+        message={confirmModal.message}
+        confirmLabel={confirmModal.confirmLabel}
+        variant={confirmModal.variant}
+        onConfirm={confirmModal.onConfirm}
+        onCancel={closeConfirm}
+      />
     </div>
   )
 }

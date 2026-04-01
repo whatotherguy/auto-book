@@ -19,7 +19,47 @@ CUTTABLE_ISSUE_TYPES = {
     "pickup_restart",
     "substitution",
     "long_pause",
+    "pickup_candidate",
+    "alt_take",
+    "non_speech_marker",
 }
+
+
+def auto_approve_safe_cuts(
+    session: Session,
+    chapter_id: int,
+    threshold: float = 0.8,
+) -> int:
+    """Auto-approve issues with safe_auto_cut recommendation above threshold."""
+    from .scoring.pipeline import run_scoring_pipeline  # noqa: F401
+
+    issues = session.exec(
+        select(Issue).where(Issue.chapter_id == chapter_id)
+    ).all()
+
+    from ..models import ScoringResult
+    import json
+
+    approved_count = 0
+    for issue in issues:
+        scoring = session.exec(
+            select(ScoringResult).where(ScoringResult.issue_id == issue.id)
+        ).first()
+        if not scoring or not scoring.recommendation_json:
+            continue
+        try:
+            rec = json.loads(scoring.recommendation_json)
+        except (json.JSONDecodeError, TypeError):
+            continue
+        if rec.get("action") == "safe_auto_cut" and rec.get("confidence", 0) >= threshold:
+            if issue.status != "approved":
+                issue.status = "approved"
+                session.add(issue)
+                approved_count += 1
+
+    if approved_count > 0:
+        session.commit()
+    return approved_count
 
 
 def build_auto_edit_export(
@@ -28,7 +68,12 @@ def build_auto_edit_export(
     chapter: Chapter,
     source_audio_path: Path,
     target_path: Path,
+    auto_approve_threshold: float | None = None,
 ) -> Path:
+    # Optionally auto-approve safe cuts before building the edit
+    if auto_approve_threshold is not None:
+        auto_approve_safe_cuts(session, chapter.id, auto_approve_threshold)
+
     approved_issues = session.exec(
         select(Issue).where(Issue.chapter_id == chapter.id, Issue.status == "approved")
     ).all()

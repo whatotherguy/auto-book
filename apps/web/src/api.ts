@@ -1,4 +1,4 @@
-import { AcxCheck, AnalysisJob, AppSettings, Chapter, HealthStatus, Issue, Project, TranscriptionMode } from "./types"
+import { AcxCheck, AltTakeCluster, AnalysisJob, AppSettings, AudioSignalRecord, Chapter, HealthStatus, Issue, Project, TranscriptionMode, VadSegmentRecord } from "./types"
 
 const API_BASE = import.meta.env.VITE_API_BASE ?? "http://localhost:8000"
 
@@ -257,4 +257,28 @@ export function updateIssue(issueId: number, payload: Partial<Pick<Issue, "statu
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify(payload)
   })
+}
+
+export function getAudioSignals(chapterId: number) {
+  return fetchJson<AudioSignalRecord[]>(`/chapters/${chapterId}/audio-signals`)
+}
+
+export function getVadSegments(chapterId: number) {
+  return fetchJson<VadSegmentRecord[]>(`/chapters/${chapterId}/vad-segments`)
+}
+
+export function getAltTakeClusters(chapterId: number) {
+  return fetchJson<AltTakeCluster[]>(`/chapters/${chapterId}/alt-take-clusters`)
+}
+
+export function setPreferredTake(clusterId: number, preferredIssueId: number) {
+  return fetchJson<AltTakeCluster>(`/alt-take-clusters/${clusterId}/preferred`, {
+    method: "PATCH",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ preferred_issue_id: preferredIssueId })
+  })
+}
+
+export function getScoringSummary(chapterId: number) {
+  return fetchJson<{ envelopes: any[]; baseline_stats: any }>(`/chapters/${chapterId}/scoring-summary`)
 }

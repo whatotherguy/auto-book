@@ -8,7 +8,7 @@ from sqlmodel import Session, select
 from ..api.chapters import sync_chapter_audio_path
 from ..db import get_session
 from ..jobs import start_auto_edit_job
-from ..models import AnalysisJob, Chapter, Issue
+from ..models import AnalysisJob, Chapter, Issue, ScoringResult
 from ..services.export import build_auto_edit_export
 from ..services.storage import ensure_chapter_dirs
 from ..utils.timecode import ms_to_timecode
@@ -38,8 +38,23 @@ def export_csv(chapter_id: int, session: Session = Depends(get_session)):
             "spoken_text",
             "status",
             "note",
+            "priority",
+            "mistake_score",
+            "pickup_score",
+            "performance_score",
+            "splice_score",
         ])
+
+        # Pre-fetch scoring results
+        scoring_map: dict[int, ScoringResult] = {}
+        scoring_results = session.exec(
+            select(ScoringResult).where(ScoringResult.chapter_id == chapter_id)
+        ).all()
+        for sr in scoring_results:
+            scoring_map[sr.issue_id] = sr
+
         for issue in issues:
+            sr = scoring_map.get(issue.id)
             writer.writerow([
                 issue.id,
                 issue.type,
@@ -50,6 +65,11 @@ def export_csv(chapter_id: int, session: Session = Depends(get_session)):
                 issue.spoken_text,
                 issue.status,
                 issue.note or "",
+                sr.priority if sr else "",
+                round(sr.mistake_score, 4) if sr else "",
+                round(sr.pickup_score, 4) if sr else "",
+                round(sr.performance_score, 4) if sr else "",
+                round(sr.splice_score, 4) if sr else "",
             ])
 
     return FileResponse(path=target, filename="issues.csv", media_type="text/csv")
@@ -87,7 +107,7 @@ def export_json(chapter_id: int, session: Session = Depends(get_session)):
 
 
 @router.post("/chapters/{chapter_id}/exports/edited-wav")
-def export_edited_wav(chapter_id: int, session: Session = Depends(get_session)):
+def export_edited_wav(chapter_id: int, auto_approve_threshold: float | None = None, session: Session = Depends(get_session)):
     chapter = session.get(Chapter, chapter_id)
     if not chapter:
         raise HTTPException(status_code=404, detail="Chapter not found")
@@ -105,6 +125,7 @@ def export_edited_wav(chapter_id: int, session: Session = Depends(get_session)):
             chapter=chapter,
             source_audio_path=audio_path,
             target_path=target,
+            auto_approve_threshold=auto_approve_threshold,
         )
     except ValueError as exc:
         raise HTTPException(status_code=400, detail=str(exc)) from exc

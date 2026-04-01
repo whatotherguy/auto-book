@@ -21,7 +21,8 @@ export function WaveformPanel({
   focusEndMs,
   issueType,
   onTimeUpdate,
-  onPlayStateChange
+  onPlayStateChange,
+  spokenTokens,
 }: {
   audioUrl: string | null | undefined
   hasAudio: boolean
@@ -263,7 +264,7 @@ export function WaveformPanel({
             <strong>Selected Review Window</strong>
             <p className="muted">
               {focusEndMs != null
-                ? `${issueType ? issueType.replaceAll("_", " ") : "Issue"} at ${formatWindow(focusStartMs, focusEndMs)}`
+                ? `${issueType ? issueType.replace(/_/g, " ") : "Issue"} at ${formatWindow(focusStartMs, focusEndMs)}`
                 : `Issue starts at ${formatSeconds(focusStartMs / 1000)}`}
             </p>
           </div>
@@ -288,7 +289,7 @@ export function WaveformPanel({
             />
             <span>
               Preview edit for this issue
-              {issueType ? ` (${issueType.replaceAll("_", " ")})` : ""}
+              {issueType ? ` (${issueType.replace(/_/g, " ")})` : ""}
             </span>
           </label>
           <div className="waveform-meta">
@@ -322,23 +323,52 @@ export function WaveformPanel({
 }
 
 
+function useThrottledValue<T>(value: T, intervalMs: number): T {
+  const [throttled, setThrottled] = useState(value)
+  const lastRef = useRef(0)
+  const timerRef = useRef<number | null>(null)
+
+  useEffect(() => {
+    const now = Date.now()
+    if (now - lastRef.current >= intervalMs) {
+      lastRef.current = now
+      setThrottled(value)
+    } else if (timerRef.current == null) {
+      timerRef.current = window.setTimeout(() => {
+        lastRef.current = Date.now()
+        setThrottled(value)
+        timerRef.current = null
+      }, intervalMs - (now - lastRef.current))
+    }
+    return () => {
+      if (timerRef.current != null) {
+        window.clearTimeout(timerRef.current)
+        timerRef.current = null
+      }
+    }
+  }, [value, intervalMs])
+
+  return throttled
+}
+
 function FollowAlongStrip({ tokens, playbackTimeMs, isPlaying }: { tokens: SpokenToken[]; playbackTimeMs: number; isPlaying: boolean }) {
   const scrollRef = useRef<HTMLDivElement>(null)
   const activeRef = useRef<HTMLSpanElement>(null)
+  const throttledTimeMs = useThrottledValue(playbackTimeMs, 200) // ~5Hz
 
   const activeIndex = useMemo(() => {
-    if (!tokens.length || playbackTimeMs <= 0) return -1
+    if (!tokens.length || throttledTimeMs <= 0) return -1
     let lo = 0
     let hi = tokens.length - 1
     let best = -1
     while (lo <= hi) {
       const mid = (lo + hi) >> 1
       const t = tokens[mid]
-      if (playbackTimeMs >= t.start_ms && playbackTimeMs <= t.end_ms) return mid
-      if (playbackTimeMs < t.start_ms) { hi = mid - 1 } else { best = mid; lo = mid + 1 }
+      if (throttledTimeMs >= t.start_ms && throttledTimeMs <= t.end_ms) return mid
+      if (throttledTimeMs < t.start_ms) { hi = mid - 1 } else { best = mid; lo = mid + 1 }
     }
     return best
-  }, [tokens, playbackTimeMs])
+  }, [tokens, throttledTimeMs])
 
   useEffect(() => {
     if (activeRef.current) {

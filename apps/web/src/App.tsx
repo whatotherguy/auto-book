@@ -4,11 +4,14 @@ import { ProjectsPage } from "./pages/ProjectsPage"
 import { ProjectPage } from "./pages/ProjectPage"
 import { ChapterReviewPage } from "./pages/ChapterReviewPage"
 import { buildHashRoute, parseHashRoute } from "./routing"
+import { getProject } from "./api"
+import { cachedFetch } from "./cache"
 
 export default function App() {
   const initialRoute = parseHashRoute(window.location.hash)
   const [projectId, setProjectId] = useState<number | null>(initialRoute.projectId)
   const [chapterId, setChapterId] = useState<number | null>(initialRoute.chapterId)
+  const [projectName, setProjectName] = useState<string | null>(null)
 
   useEffect(() => {
     const nextHash = buildHashRoute(projectId, chapterId)
@@ -16,6 +19,17 @@ export default function App() {
       window.location.hash = nextHash
     }
   }, [projectId, chapterId])
+
+  // Fetch project name for breadcrumbs
+  useEffect(() => {
+    if (projectId) {
+      cachedFetch(`project:${projectId}`, () => getProject(projectId), 120_000)
+        .then((p) => setProjectName(p.name))
+        .catch(() => setProjectName(null))
+    } else {
+      setProjectName(null)
+    }
+  }, [projectId])
 
   useEffect(() => {
     function handleHashChange() {
@@ -34,7 +48,10 @@ export default function App() {
         <ChapterReviewPage
           key={chapterId}
           chapterId={chapterId}
+          projectId={projectId}
+          projectName={projectName}
           onBack={() => setChapterId(null)}
+          onBackToProjects={() => { setChapterId(null); setProjectId(null) }}
         />
       ) : projectId ? (
         <ProjectPage

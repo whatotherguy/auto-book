@@ -2,6 +2,8 @@ import { ChangeEvent, FormEvent, useEffect, useId, useState } from "react"
 import { createChapter, deleteChapter, getProject, getProjectChapters, uploadChapterAudio, uploadChapterText, uploadChapterTextFile } from "../api"
 import { Chapter, Project } from "../types"
 import { CollapsibleSection } from "../components/CollapsibleSection"
+import { Breadcrumb } from "../components/Breadcrumb"
+import { ConfirmModal } from "../components/ConfirmModal"
 
 export function ProjectPage({
   projectId,
@@ -29,6 +31,7 @@ export function ProjectPage({
   const [textFileName, setTextFileName] = useState<string | null>(null)
   const [isSaving, setIsSaving] = useState(false)
   const [error, setError] = useState<string | null>(null)
+  const [deleteTarget, setDeleteTarget] = useState<Chapter | null>(null)
 
   async function loadChapters() {
     try {
@@ -95,10 +98,10 @@ export function ProjectPage({
     }
   }
 
-  async function handleDeleteChapter(chapterId: number) {
-    if (!window.confirm("Delete this chapter and its saved artifacts?")) {
-      return
-    }
+  async function handleDeleteConfirmed() {
+    if (!deleteTarget) return
+    const chapterId = deleteTarget.id
+    setDeleteTarget(null)
 
     try {
       setError(null)
@@ -111,7 +114,11 @@ export function ProjectPage({
 
   return (
     <div className="page app-shell">
-      <button type="button" onClick={onBack}>Back to Projects</button>
+      <Breadcrumb items={[
+        { label: "Projects", onClick: onBack },
+        { label: project?.name ?? `Project ${projectId}` },
+      ]} />
+
       <div className="page-hero compact">
         <p className="eyebrow">Project Workspace</p>
         <h1>{project?.name ?? `Project ${projectId}`}</h1>
@@ -202,13 +209,22 @@ export function ProjectPage({
                 Chapter {chapter.chapter_number}
                 {chapter.title ? `: ${chapter.title}` : ""}
               </button>
-              <button type="button" className="danger-button" onClick={() => handleDeleteChapter(chapter.id)}>
+              <button type="button" className="danger-button" onClick={() => setDeleteTarget(chapter)}>
                 Delete
               </button>
             </div>
           ))}
         </div>
       </CollapsibleSection>
+      <ConfirmModal
+        open={deleteTarget != null}
+        title="Delete Chapter"
+        message={`Delete Chapter ${deleteTarget?.chapter_number}${deleteTarget?.title ? `: ${deleteTarget.title}` : ""} and its saved artifacts? This cannot be undone.`}
+        confirmLabel="Delete"
+        variant="danger"
+        onConfirm={handleDeleteConfirmed}
+        onCancel={() => setDeleteTarget(null)}
+      />
     </div>
   )
 }

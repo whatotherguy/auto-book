@@ -11,6 +11,7 @@ from .api.exports import router as exports_router
 from .api.issues import router as issues_router
 from .api.jobs import router as jobs_router
 from .api.projects import router as projects_router
+from .api.calibration import router as calibration_router
 from .api.settings import router as settings_router
 from .config import settings
 from .db import init_db
@@ -63,6 +64,7 @@ app.include_router(issues_router)
 app.include_router(exports_router)
 app.include_router(jobs_router)
 app.include_router(settings_router)
+app.include_router(calibration_router)
 
 def startup_health_checks():
     global ffmpeg_available, ffprobe_available

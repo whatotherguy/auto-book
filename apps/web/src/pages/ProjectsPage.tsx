@@ -2,6 +2,7 @@ import { FormEvent, useEffect, useId, useState } from "react"
 import { createProject, deleteProject, getProjects } from "../api"
 import { Project } from "../types"
 import { CollapsibleSection } from "../components/CollapsibleSection"
+import { ConfirmModal } from "../components/ConfirmModal"
 
 export function ProjectsPage({ onOpenProject }: { onOpenProject: (id: number) => void }) {
   const projectNameId = useId()
@@ -9,6 +10,7 @@ export function ProjectsPage({ onOpenProject }: { onOpenProject: (id: number) =>
   const [projects, setProjects] = useState<Project[]>([])
   const [name, setName] = useState("")
   const [error, setError] = useState<string | null>(null)
+  const [deleteTarget, setDeleteTarget] = useState<Project | null>(null)
 
   async function load() {
     try {
@@ -39,10 +41,10 @@ export function ProjectsPage({ onOpenProject }: { onOpenProject: (id: number) =>
     }
   }
 
-  async function handleDelete(projectId: number) {
-    if (!window.confirm("Delete this project and all its chapters?")) {
-      return
-    }
+  async function handleDeleteConfirmed() {
+    if (!deleteTarget) return
+    const projectId = deleteTarget.id
+    setDeleteTarget(null)
 
     try {
       setError(null)
@@ -98,13 +100,22 @@ export function ProjectsPage({ onOpenProject }: { onOpenProject: (id: number) =>
               >
                 {project.name}
               </button>
-              <button type="button" className="danger-button" onClick={() => handleDelete(project.id)}>
+              <button type="button" className="danger-button" onClick={() => setDeleteTarget(project)}>
                 Delete
               </button>
             </div>
           ))}
         </div>
       </CollapsibleSection>
+      <ConfirmModal
+        open={deleteTarget != null}
+        title="Delete Project"
+        message={`Delete "${deleteTarget?.name}" and all its chapters? This cannot be undone.`}
+        confirmLabel="Delete"
+        variant="danger"
+        onConfirm={handleDeleteConfirmed}
+        onCancel={() => setDeleteTarget(null)}
+      />
     </div>
   )
 }

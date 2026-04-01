@@ -1,7 +1,10 @@
 import { useEffect, useMemo, useState, type CSSProperties, type ReactNode } from "react"
 import { Issue } from "../types"
-import { ConfidenceFilter, getConfidenceBand, getIssueTypeMeta, humanize } from "../utils"
+import { ConfidenceFilter, getConfidenceBand, getIssueTypeMeta, humanize, PRIORITY_COLORS, PRIORITY_ORDER } from "../utils"
 import { CollapsibleSection } from "./CollapsibleSection"
+import { SkeletonIssueList } from "./Skeleton"
+
+const PAGE_SIZE = 50
 
 type IssueListProps = {
   issues: Issue[]
@@ -10,6 +13,7 @@ type IssueListProps = {
   searchQuery: string
   typeFilter: string
   confidenceFilter: ConfidenceFilter
+  loading?: boolean
 }
 
 export function IssueList({
@@ -18,10 +22,13 @@ export function IssueList({
   onSelect,
   searchQuery,
   typeFilter,
-  confidenceFilter
+  confidenceFilter,
+  loading = false,
 }: IssueListProps) {
-  const [sortBy, setSortBy] = useState<"time" | "confidence" | "type">("time")
+  const [sortBy, setSortBy] = useState<"time" | "confidence" | "type" | "priority">("priority")
+  const [visibleCount, setVisibleCount] = useState(PAGE_SIZE)
   const normalizedSearch = searchQuery.trim().toLowerCase()
+
   const visibleIssues = useMemo(() => issues.filter((issue) => {
     if (typeFilter !== "all" && issue.type !== typeFilter) {
       return false
@@ -36,7 +43,19 @@ export function IssueList({
 
   const sortedIssues = useMemo(() => {
     const sorted = [...visibleIssues]
-    if (sortBy === "confidence") {
+    if (sortBy === "priority") {
+      sorted.sort((a, b) => {
+        const pa = PRIORITY_ORDER[a.recommendation?.priority ?? "info"] ?? 4
+        const pb = PRIORITY_ORDER[b.recommendation?.priority ?? "info"] ?? 4
+        if (pa !== pb) return pa - pb
+        const ma = a.composite_scores?.mistake_candidate?.score ?? 0
+        const mb = b.composite_scores?.mistake_candidate?.score ?? 0
+        if (ma !== mb) return mb - ma
+        const pua = a.composite_scores?.pickup_candidate?.score ?? 0
+        const pub = b.composite_scores?.pickup_candidate?.score ?? 0
+        return pub - pua
+      })
+    } else if (sortBy === "confidence") {
       sorted.sort((a, b) => b.confidence - a.confidence)
     } else if (sortBy === "type") {
       sorted.sort((a, b) => a.type.localeCompare(b.type) || a.start_ms - b.start_ms)
@@ -45,6 +64,14 @@ export function IssueList({
     }
     return sorted
   }, [visibleIssues, sortBy])
+
+  // Reset visible count when filters change
+  useEffect(() => {
+    setVisibleCount(PAGE_SIZE)
+  }, [typeFilter, confidenceFilter, normalizedSearch, sortBy])
+
+  const paginatedIssues = sortedIssues.slice(0, visibleCount)
+  const hasMore = visibleCount < sortedIssues.length
 
   // Auto-scroll selected issue into view
   useEffect(() => {
@@ -61,16 +88,19 @@ export function IssueList({
       subtitle={`${visibleIssues.length} matching issue${visibleIssues.length === 1 ? "" : "s"}`}
       storageKey="chapter-review:issue-list"
     >
-      <select value={sortBy} onChange={(e) => setSortBy(e.target.value as "time" | "confidence" | "type")} className="issue-sort-select">
+      <select value={sortBy} onChange={(e) => setSortBy(e.target.value as "time" | "confidence" | "type" | "priority")} className="issue-sort-select">
+        <option value="priority">Sort by Priority</option>
         <option value="time">Sort by Time</option>
         <option value="confidence">Sort by Confidence</option>
         <option value="type">Sort by Type</option>
       </select>
-      {sortedIssues.length === 0 ? (
+      {loading ? (
+        <SkeletonIssueList count={5} />
+      ) : sortedIssues.length === 0 ? (
         <p className="muted">No issues match the current search and filters.</p>
       ) : (
         <div className="list">
-          {sortedIssues.map((issue) => {
+          {paginatedIssues.map((issue) => {
             const isSelected = issue.id === selectedIssueId
             const typeMeta = getIssueTypeMeta(issue.type)
             const confidenceBand = getConfidenceBand(issue.confidence)
@@ -86,8 +116,15 @@ export function IssueList({
               >
                 <div className="issue-card-row">
                   <div className="issue-card-meta">
+                    {issue.recommendation?.priority && issue.recommendation.priority !== "info" ? (
+                      <span
+                        className="priority-dot"
+                        style={{ background: PRIORITY_COLORS[issue.recommendation.priority] ?? "transparent" }}
+                        title={`Priority: ${issue.recommendation.priority}`}
+                      />
+                    ) : null}
                     <span className="issue-type-badge" style={{ "--issue-color": typeMeta.color } as CSSProperties}>
-                      {typeMeta.label}
+                      {(typeMeta as any).icon ? `${(typeMeta as any).icon} ` : ""}{typeMeta.label}
                     </span>
                     <span className={`issue-confidence-badge ${confidenceBand.className}`}>{confidenceBand.label}</span>
                   </div>
@@ -127,6 +164,15 @@ export function IssueList({
               </button>
             )
           })}
+          {hasMore ? (
+            <button
+              type="button"
+              className="show-more-button"
+              onClick={() => setVisibleCount((c) => c + PAGE_SIZE)}
+            >
+              Show more ({sortedIssues.length - visibleCount} remaining)
+            </button>
+          ) : null}
         </div>
       )}
     </CollapsibleSection>

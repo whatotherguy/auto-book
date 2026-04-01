@@ -3,7 +3,7 @@
   "private": true,
   "scripts": {
     "api": "cd apps/api && .venv/Scripts/python.exe -m uvicorn app.main:app --reload --port 8000",
-    "web": "node apps/web/node_modules/vite/bin/vite.js --config apps/web/vite.config.ts --root apps/web",
+    "web": "cd apps/web && node node_modules/vite/bin/vite.js",
     "dev": "node ./node_modules/concurrently/dist/bin/concurrently.js -n api,web -c blue,green \"npm run api\" \"npm run web\"",
     "install:api": "cd apps/api && .venv/Scripts/python.exe -m pip install -e .",
     "install:web": "cd apps/web && npm install",

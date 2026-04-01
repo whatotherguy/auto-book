@@ -4,8 +4,6 @@ import { ConfidenceFilter, getConfidenceBand, getIssueTypeMeta, humanize, PRIORI
 import { CollapsibleSection } from "./CollapsibleSection"
 import { SkeletonIssueList } from "./Skeleton"
 
-const PAGE_SIZE = 50
-
 type IssueListProps = {
   issues: Issue[]
   selectedIssueId: number | null
@@ -26,7 +24,6 @@ export function IssueList({
   loading = false,
 }: IssueListProps) {
   const [sortBy, setSortBy] = useState<"time" | "confidence" | "type" | "priority">("priority")
-  const [visibleCount, setVisibleCount] = useState(PAGE_SIZE)
   const normalizedSearch = searchQuery.trim().toLowerCase()
 
   const visibleIssues = useMemo(() => issues.filter((issue) => {
@@ -65,20 +62,12 @@ export function IssueList({
     return sorted
   }, [visibleIssues, sortBy])
 
-  // Reset visible count when filters change
-  useEffect(() => {
-    setVisibleCount(PAGE_SIZE)
-  }, [typeFilter, confidenceFilter, normalizedSearch, sortBy])
-
-  const paginatedIssues = sortedIssues.slice(0, visibleCount)
-  const hasMore = visibleCount < sortedIssues.length
-
   // Auto-scroll selected issue into view
   useEffect(() => {
     if (selectedIssueId == null) return
     const el = document.querySelector(`.issue-card[aria-pressed="true"]`)
     if (el) {
-      el.scrollIntoView({ behavior: "smooth", block: "nearest" })
+      el.scrollIntoView({ behavior: "smooth", block: "nearest", inline: "nearest" })
     }
   }, [selectedIssueId])
 
@@ -87,20 +76,26 @@ export function IssueList({
       title="Issue List"
       subtitle={`${visibleIssues.length} matching issue${visibleIssues.length === 1 ? "" : "s"}`}
       storageKey="chapter-review:issue-list"
+      actions={
+        <select
+          value={sortBy}
+          onChange={(e) => setSortBy(e.target.value as "time" | "confidence" | "type" | "priority")}
+          className="issue-sort-select"
+        >
+          <option value="priority">Priority</option>
+          <option value="time">Time</option>
+          <option value="confidence">Confidence</option>
+          <option value="type">Type</option>
+        </select>
+      }
     >
-      <select value={sortBy} onChange={(e) => setSortBy(e.target.value as "time" | "confidence" | "type" | "priority")} className="issue-sort-select">
-        <option value="priority">Sort by Priority</option>
-        <option value="time">Sort by Time</option>
-        <option value="confidence">Sort by Confidence</option>
-        <option value="type">Sort by Type</option>
-      </select>
       {loading ? (
         <SkeletonIssueList count={5} />
       ) : sortedIssues.length === 0 ? (
         <p className="muted">No issues match the current search and filters.</p>
       ) : (
-        <div className="list">
-          {paginatedIssues.map((issue) => {
+        <div className="issue-list-horizontal">
+          {sortedIssues.map((issue) => {
             const isSelected = issue.id === selectedIssueId
             const typeMeta = getIssueTypeMeta(issue.type)
             const confidenceBand = getConfidenceBand(issue.confidence)
@@ -129,12 +124,15 @@ export function IssueList({
                     <span className={`issue-confidence-badge ${confidenceBand.className}`}>{confidenceBand.label}</span>
                   </div>
                   <span className="pill">{humanize(issue.status)}</span>
-                  {issue.triage_verdict ? (
+                </div>
+
+                {issue.triage_verdict ? (
+                  <div className="issue-card-meta">
                     <span className={`issue-triage-badge ${issue.triage_verdict}`} title={issue.triage_reason ?? ""}>
                       {issue.triage_verdict === "dismiss" ? "AI: Likely OK" : issue.triage_verdict === "keep" ? "AI: Review" : "AI: Unclear"}
                     </span>
-                  ) : null}
-                </div>
+                  </div>
+                ) : null}
 
                 <div className="issue-card-text">
                   <span className="issue-card-field">
@@ -144,35 +142,9 @@ export function IssueList({
                     <strong>Spoken:</strong> {renderHighlightedText(issue.spoken_text, normalizedSearch)}
                   </span>
                 </div>
-
-                <div className="issue-card-context">
-                  <span className="issue-card-field">
-                    <strong>Before:</strong> {renderHighlightedText(issue.context_before, normalizedSearch)}
-                  </span>
-                  <span className="issue-card-field">
-                    <strong>After:</strong> {renderHighlightedText(issue.context_after, normalizedSearch)}
-                  </span>
-                </div>
-
-                {issue.note ? (
-                  <div className="issue-card-note">
-                    <span className="issue-card-field">
-                      <strong>Note:</strong> {renderHighlightedText(issue.note, normalizedSearch)}
-                    </span>
-                  </div>
-                ) : null}
               </button>
             )
           })}
-          {hasMore ? (
-            <button
-              type="button"
-              className="show-more-button"
-              onClick={() => setVisibleCount((c) => c + PAGE_SIZE)}
-            >
-              Show more ({sortedIssues.length - visibleCount} remaining)
-            </button>
-          ) : null}
         </div>
       )}
     </CollapsibleSection>

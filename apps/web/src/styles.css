@@ -224,7 +224,7 @@ form {
 }
 
 .review-grid-2col {
-  grid-template-columns: minmax(0, 1.6fr) minmax(320px, 1fr);
+  grid-template-columns: minmax(0, 2fr) minmax(200px, 0.6fr);
 }
 
 /* Waveform section spacing */
@@ -389,6 +389,53 @@ form {
 
 .issue-card-field strong {
   color: #f8fafc;
+}
+
+/* --- Horizontal issue list --- */
+.issue-list-horizontal {
+  display: flex;
+  flex-direction: row;
+  gap: 8px;
+  overflow-x: auto;
+  padding-bottom: 6px;
+  scrollbar-width: thin;
+  scrollbar-color: rgba(103, 232, 249, 0.25) transparent;
+}
+
+.issue-list-horizontal::-webkit-scrollbar {
+  height: 5px;
+}
+
+.issue-list-horizontal::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.issue-list-horizontal::-webkit-scrollbar-thumb {
+  background: rgba(103, 232, 249, 0.22);
+  border-radius: 999px;
+}
+
+.issue-list-horizontal .issue-card {
+  flex: 0 0 auto;
+  width: 210px;
+}
+
+.issue-list-horizontal .issue-card-text {
+  overflow: hidden;
+}
+
+.issue-list-horizontal .issue-card-field {
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  max-width: 100%;
+  display: block;
+}
+
+.issue-sort-select {
+  font-size: 0.82rem;
+  padding: 3px 6px;
+  border-radius: 6px;
 }
 
 .issue-card mark {
@@ -1175,6 +1222,145 @@ button:disabled {
 
 .status-step {
   color: #cbd5e1;
+}
+
+/* --- Job Status Popup Stack --- */
+.job-popup-stack {
+  position: fixed;
+  bottom: 20px;
+  right: 20px;
+  z-index: 60;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  align-items: flex-end;
+  pointer-events: none;
+}
+
+.job-popup {
+  pointer-events: auto;
+  width: 280px;
+  background: rgba(8, 15, 30, 0.95);
+  border: 1px solid rgba(103, 232, 249, 0.2);
+  border-radius: 12px;
+  backdrop-filter: blur(12px);
+  box-shadow: 0 16px 40px rgba(2, 6, 23, 0.5);
+  padding: 14px 16px;
+  animation: job-popup-in 0.25s ease;
+  position: relative;
+  overflow: hidden;
+}
+
+.job-popup::after {
+  content: "";
+  position: absolute;
+  inset: auto -10% -38px;
+  height: 90px;
+  background: radial-gradient(circle, rgba(103, 232, 249, 0.12), transparent 65%);
+  pointer-events: none;
+}
+
+@keyframes job-popup-in {
+  from {
+    transform: translateY(16px);
+    opacity: 0;
+  }
+  to {
+    transform: translateY(0);
+    opacity: 1;
+  }
+}
+
+.job-popup.job-popup-collapsed {
+  width: auto;
+  min-width: 180px;
+  padding: 8px 12px;
+}
+
+.job-popup-header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 10px;
+  margin-bottom: 10px;
+}
+
+.job-popup-header-info {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.job-popup-title {
+  font-size: 0.88rem;
+  font-weight: 600;
+  color: #f8fafc;
+}
+
+.job-popup-status {
+  font-size: 0.78rem;
+  color: #8ba0bd;
+}
+
+.job-popup-header-btns {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  flex-shrink: 0;
+}
+
+.job-popup-progress-label {
+  font-size: 0.82rem;
+  color: #67e8f9;
+  margin-right: 4px;
+}
+
+.job-popup-btn {
+  padding: 2px 7px;
+  font-size: 0.8rem;
+  line-height: 1.4;
+  border-radius: 999px;
+  border: 1px solid rgba(148, 163, 184, 0.2);
+  background: rgba(15, 23, 42, 0.76);
+  color: #94a3b8;
+  cursor: pointer;
+}
+
+.job-popup-btn:hover {
+  background: rgba(103, 232, 249, 0.15);
+  color: #67e8f9;
+  transform: none;
+  box-shadow: none;
+}
+
+/* Collapsed/mini bar */
+.job-popup-mini {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.job-popup-mini-title {
+  font-size: 0.82rem;
+  font-weight: 600;
+  color: #cbd5e1;
+  white-space: nowrap;
+}
+
+.job-popup-mini-bar {
+  flex: 1;
+  height: 6px;
+  border-radius: 999px;
+  overflow: hidden;
+  background: rgba(15, 23, 42, 0.78);
+  border: 1px solid rgba(148, 163, 184, 0.12);
+  min-width: 60px;
+}
+
+.job-popup-mini-pct {
+  font-size: 0.78rem;
+  color: #67e8f9;
+  white-space: nowrap;
 }
 
 .sticky-panel {

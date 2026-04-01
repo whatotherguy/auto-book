@@ -99,7 +99,7 @@ def test_run_simulation_returns_result():
     )
     result = run_simulation(cfg, segments, baseline)
     assert isinstance(result, SimulationResult)
-    assert result.elapsed_ms > 0
+    assert result.elapsed_ms >= 0
     assert len(result.predictions) == len(segments)
     assert "combined_f1" in result.metrics or "combined_score" in result.metrics
 

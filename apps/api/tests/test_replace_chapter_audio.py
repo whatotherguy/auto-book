@@ -34,6 +34,7 @@ def test_reuploading_chapter_audio_resets_stale_review_state(tmp_path, monkeypat
             yield session
 
     app.dependency_overrides[get_session] = override_get_session
+    monkeypatch.setattr("app.db.engine", engine)
 
     try:
         with TestClient(app) as client:

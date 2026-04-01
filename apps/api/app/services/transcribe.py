@@ -41,7 +41,7 @@ def detect_gpu() -> dict[str, Any]:
             result["available"] = True
             result["device"] = "cuda"
             result["name"] = torch.cuda.get_device_name(0)
-            vram_bytes = torch.cuda.get_device_properties(0).total_mem
+            vram_bytes = torch.cuda.get_device_properties(0).total_memory
             result["vram_gb"] = round(vram_bytes / (1024**3), 1)
             # Choose compute type based on VRAM
             if result["vram_gb"] >= 8:

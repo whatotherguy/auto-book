@@ -23,7 +23,7 @@ import {
   getSpokenTokens
 } from "../api"
 import { AcxPanel } from "../components/AcxPanel"
-import { JobStatus } from "../components/JobStatus"
+import { JobStatusPopup } from "../components/JobStatusPopup"
 import { IssueDetail } from "../components/IssueDetail"
 import { IssueList } from "../components/IssueList"
 import { IssueTimeline } from "../components/IssueTimeline"
@@ -703,20 +703,19 @@ export function ChapterReviewPage({
         onTimeUpdate={setPlaybackTimeMs}
       />
 
-      {/* Two-column review grid */}
-      <div className="grid review-grid-2col">
-        <div className="review-column">
-          <IssueList
-            issues={issues}
-            selectedIssueId={selectedIssueId}
-            onSelect={(issue) => setSelectedIssueId(issue.id)}
-            searchQuery={searchQuery}
-            typeFilter={typeFilter}
-            confidenceFilter={confidenceFilter}
-            loading={loading}
-          />
-        </div>
+      {/* Full-width horizontal issue list */}
+      <IssueList
+        issues={issues}
+        selectedIssueId={selectedIssueId}
+        onSelect={(issue) => setSelectedIssueId(issue.id)}
+        searchQuery={searchQuery}
+        typeFilter={typeFilter}
+        confidenceFilter={confidenceFilter}
+        loading={loading}
+      />
 
+      {/* Detail + manuscript columns */}
+      <div className="grid review-grid-2col">
         <div className="review-column">
           <IssueDetail
             issue={selectedIssue}
@@ -736,38 +735,6 @@ export function ChapterReviewPage({
             />
           ) : null}
 
-          <ManuscriptPanel text={chapter?.raw_text ?? ""} />
-
-          {uploadProgress != null || isReplacingAudio ? (
-            <JobStatus
-              title="WAV Upload"
-              storageKey="chapter-review:wav-upload"
-              status={isReplacingAudio ? "uploading" : "idle"}
-              progress={uploadProgress ?? undefined}
-              step={isReplacingAudio ? "replace_wav" : null}
-            />
-          ) : null}
-
-          {analysisJob ? (
-            <JobStatus
-              status={analysisJob.status}
-              progress={analysisJob.progress}
-              step={analysisJob.current_step}
-              errorMessage={analysisJob.error_message}
-            />
-          ) : null}
-
-          {autoEditJob ? (
-            <JobStatus
-              title="Auto Edit Status"
-              storageKey="chapter-review:auto-edit-status"
-              status={autoEditJob.status}
-              progress={autoEditJob.progress}
-              step={autoEditJob.current_step}
-              errorMessage={autoEditJob.error_message}
-            />
-          ) : null}
-
           <AcxPanel
             report={acxReport}
             onRun={handleRunAcxCheck}
@@ -777,10 +744,41 @@ export function ChapterReviewPage({
 
           <SettingsPanel settings={appSettings} onUpdate={setAppSettings} />
         </div>
+
+        <div className="review-column">
+          <ManuscriptPanel text={chapter?.raw_text ?? ""} />
+        </div>
       </div>
 
       <KeyboardShortcutOverlay />
       <UndoToast toast={undoToast} onDismiss={() => setUndoToast(null)} />
+      <div className="job-popup-stack">
+        {uploadProgress != null || isReplacingAudio ? (
+          <JobStatusPopup
+            title="WAV Upload"
+            status={isReplacingAudio ? "uploading" : "idle"}
+            progress={uploadProgress ?? undefined}
+            step={isReplacingAudio ? "replace_wav" : null}
+          />
+        ) : null}
+        {analysisJob ? (
+          <JobStatusPopup
+            status={analysisJob.status}
+            progress={analysisJob.progress}
+            step={analysisJob.current_step}
+            errorMessage={analysisJob.error_message}
+          />
+        ) : null}
+        {autoEditJob ? (
+          <JobStatusPopup
+            title="Auto Edit Status"
+            status={autoEditJob.status}
+            progress={autoEditJob.progress}
+            step={autoEditJob.current_step}
+            errorMessage={autoEditJob.error_message}
+          />
+        ) : null}
+      </div>
       <ConfirmModal
         open={confirmModal.open}
         title={confirmModal.title}

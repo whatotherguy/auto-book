@@ -365,7 +365,7 @@ def score_distribution(
     """Compute histogram of score values for analysis."""
     values = [r.get(score_field, 0.0) for r in results if score_field in r]
     if not values:
-        return {"bins": [], "counts": [], "mean": 0.0, "std": 0.0, "min": 0.0, "max": 0.0}
+        return {"bins": [], "counts": [], "mean": 0.0, "std": 0.0, "min": 0.0, "max": 0.0, "n": 0}
 
     min_val = min(values)
     max_val = max(values)

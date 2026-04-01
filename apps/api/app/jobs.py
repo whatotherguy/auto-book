@@ -44,6 +44,11 @@ def fail_analysis_job(
     message: str,
     chapter: Chapter | None = None,
 ) -> None:
+    try:
+        session.rollback()
+    except Exception:
+        pass
+
     if chapter is not None:
         chapter.status = "new"
         session.add(chapter)

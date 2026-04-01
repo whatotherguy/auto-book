@@ -188,6 +188,15 @@ def run_analysis(
         write_json_artifact(dirs["analysis"] / "issues.json", issue_records)
 
         persist_issue_models(session, chapter.id, issue_records)
+
+        # Resolve issue_ids in alt_take_clusters now that issues have DB ids.
+        # detect_alt_takes runs before persistence, so members only have issue_index.
+        for cluster in alt_take_clusters:
+            for member in cluster.get("members", []):
+                idx = member.get("issue_index")
+                if idx is not None and idx < len(issue_records):
+                    member["issue_id"] = issue_records[idx].get("id")
+
         _persist_signal_data(session, chapter.id, audio_signals, vad_segments, alt_take_clusters, scoring_result)
 
         chapter.status = "review"
@@ -200,13 +209,17 @@ def run_analysis(
         session.add(job)
         session.commit()
     finally:
-        if job.status == "running":
-            chapter.status = "new"
-            job.status = "failed"
-            job.error_message = job.error_message or "Analysis did not complete."
-            session.add(chapter)
-            session.add(job)
-            session.commit()
+        try:
+            if job.status == "running":
+                session.rollback()
+                chapter.status = "new"
+                job.status = "failed"
+                job.error_message = job.error_message or "Analysis did not complete."
+                session.add(chapter)
+                session.add(job)
+                session.commit()
+        except Exception as cleanup_exc:
+            logger.error("Failed to update job status in finally block: %s", cleanup_exc)
 
 
 def _persist_signal_data(

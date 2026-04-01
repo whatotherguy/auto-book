@@ -497,9 +497,9 @@ def transcribe_with_whisperx(
         except (json.JSONDecodeError, OSError):
             pass  # Fall through to fresh transcription
 
-    # Check if Whisper API backend is selected
+    # Check if Whisper API backend is selected (global setting or per-request mode)
     from ..config import settings as app_settings
-    if app_settings.transcription_backend == "whisper_api":
+    if transcription_mode == "whisper_api" or app_settings.transcription_backend == "whisper_api":
         from .transcribe_api import is_whisper_api_available, transcribe_with_whisper_api
         if is_whisper_api_available():
             try:

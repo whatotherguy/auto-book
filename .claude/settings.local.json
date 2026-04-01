@@ -1,0 +1,13 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(PYTHONPATH=. /Users/isaacmorrison/Library/Python/3.9/bin/pytest tests/test_blitz_config.py tests/test_blitz_dataset.py tests/test_blitz_perturbations.py tests/test_blitz_metrics.py tests/test_blitz_simulation.py tests/test_blitz_optimizer.py tests/test_blitz_harness.py tests/test_blitz_advanced.py -x -v)",
+      "Bash(find /Users/isaacmorrison/ab/auto-book -type f \\\\\\(-name *.md -o -name *.yaml -o -name *.json \\\\\\) -path */.claude/*)",
+      "Bash(python -m pytest apps/api/tests/ --tb=short)",
+      "Bash(python3 -m pytest apps/api/tests/ --tb=short)",
+      "Bash(grep:*)",
+      "Bash(npx tsc:*)",
+      "Bash(python -c \"from apps.api.app.services.gpu_thermal import ThermalGuard, get_gpu_thermal_status; print\\('gpu_thermal OK'\\)\")"
+    ]
+  }
+}

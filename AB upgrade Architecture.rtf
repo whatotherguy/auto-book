@@ -1,0 +1,1656 @@
+{\rtf1\ansi\ansicpg1252\cocoartf2822
+\cocoatextscaling0\cocoaplatform0{\fonttbl\f0\fnil\fcharset0 Menlo-BoldItalic;\f1\fnil\fcharset0 Menlo-Regular;\f2\fnil\fcharset0 Menlo-Bold;
+}
+{\colortbl;\red255\green255\blue255;\red0\green0\blue0;\red175\green221\blue255;\red57\green192\blue38;
+\red86\green32\blue244;\red202\green51\blue35;\red56\green185\blue199;\red36\green88\blue93;\red170\green171\blue37;
+\red125\green125\blue125;}
+{\*\expandedcolortbl;;\csgray\c0;\cssrgb\c73675\c89410\c100000;\cssrgb\c25706\c77963\c19557;
+\cssrgb\c41681\c25958\c96648;\cssrgb\c83899\c28663\c18026;\cssrgb\c25546\c77007\c82023;\csgenericrgb\c14170\c34398\c36521;\cssrgb\c72331\c71682\c18599;
+\cssrgb\c56352\c56352\c56352;}
+\margl1440\margr1440\vieww11520\viewh8400\viewkind0
+\pard\tx560\tx1120\tx1680\tx2240\tx2800\tx3360\tx3920\tx4480\tx5040\tx5600\tx6160\tx6720\pardirnatural\partightenfactor0
+
+\f0\i\b\fs22 \cf2 \ul \ulc2 \CocoaLigature0 Audiobook Editor \'97 Signal Enhancement Upgrade
+\f1\i0\b0 \ulnone \
+\
+  
+\f2\b Architecture
+\f1\b0  
+\f2\b Overview
+\f1\b0 \
+\
+  EXISTING PIPELINE (unchanged)\
+  \uc0\u9552 \u9552 \u9552 \u9552 \u9552 \u9552 \u9552 \u9552 \u9552 \u9552 \u9552 \u9552 \u9552 \u9552 \u9552 \u9552 \u9552 \u9552 \u9552 \u9552 \u9552 \u9552 \u9552 \u9552 \u9552 \u9552 \u9552 \u9552 \u9552 \u9552 \u9552 \u9552 \u9552 \u9552 \u9552 \u9552 \u9552 \u9552 \u9552 \u9552 \u9552 \u9552 \u9552 \u9552 \u9552 \u9552 \u9552 \u9552 \u9552 \u9552 \u9552 \u9552 \u9552 \u9552 \u9552 \
+    Upload \uc0\u8594  Transcribe \u8594  Tokenize \u8594  Align \u8594  Detect \u8594  Triage \u8594  Persist \u8594  Review\
+  \uc0\u8594  Export\
+\
+  NEW SIGNAL LAYERS (additive)\
+  \uc0\u9552 \u9552 \u9552 \u9552 \u9552 \u9552 \u9552 \u9552 \u9552 \u9552 \u9552 \u9552 \u9552 \u9552 \u9552 \u9552 \u9552 \u9552 \u9552 \u9552 \u9552 \u9552 \u9552 \u9552 \u9552 \u9552 \u9552 \u9552 \u9552 \u9552 \u9552 \u9552 \u9552 \u9552 \u9552 \u9552 \u9552 \u9552 \u9552 \u9552 \u9552 \u9552 \u9552 \u9552 \u9552 \u9552 \u9552 \u9552 \u9552 \u9552 \u9552 \u9552 \u9552 \u9552 \u9552 \
+    \uc0\u9484 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9488    \u9484 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9488    \u9484 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9488 \
+    \uc0\u9474  Audio Analyzer   \u9474    \u9474  Silero VAD  \u9474    \u9474  Prosody Analyzer \u9474 \
+    \uc0\u9474  (click, cutoff,  \u9474    \u9474  (speech     \u9474    \u9474  (F0, rate,       \u9474 \
+    \uc0\u9474   RMS, ZCR, etc.) \u9474    \u9474   boundaries)\u9474    \u9474   energy contour) \u9474 \
+    \uc0\u9492 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9516 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9496    \u9492 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9516 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9496    \u9492 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9516 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9496 \
+             \uc0\u9474                    \u9474                     \u9474 \
+             \uc0\u9660                    \u9660                     \u9660 \
+    \uc0\u9484 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9488 \
+    \uc0\u9474               Signal Fusion Layer                          \u9474 \
+    \uc0\u9474   Merges audio signals + VAD + prosody + existing issues  \u9474 \
+    \uc0\u9474   into enriched issue records + alt-take clusters          \u9474 \
+    \uc0\u9492 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9516 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9496 \
+                           \uc0\u9474 \
+                           \uc0\u9660 \
+                Existing detect \uc0\u8594  triage \u8594  persist pipeline\
+\
+  ---\
+  
+\f2\b 1.
+\f1\b0  
+\f2\b Data
+\f1\b0  
+\f2\b Model
+\f1\b0  
+\f2\b Changes
+\f1\b0 \
+\
+  
+\f2\b 1a.
+\f1\b0  
+\f2\b New
+\f1\b0  
+\f2\b DB
+\f1\b0  
+\f2\b Models
+\f1\b0  
+\f2\b (\cf3 models.py\cf2  additions)
+\f1\b0 \
+\
+  \cf4 #\cf2  \cf4 apps/api/app/models.py\cf2  \cf4 \'97\cf2  \cf4 ADDITIONS\cf2  \cf4 (do\cf2  \cf4 not\cf2  \cf4 modify\cf2  \cf4 existing\cf2  \cf4 models)\cf2 \
+\
+  \cf5 class\cf2  \cf5 AudioSignal(SQLModel,\cf2  \cf5 table=True):\cf2 \
+      \cf6 """Raw\cf2  \cf6 audio\cf2  \cf6 signal\cf2  \cf6 detected\cf2  \cf6 at\cf2  \cf6 a\cf2  \cf6 point\cf2  \cf6 in\cf2  \cf6 time."""\cf2 \
+      \cf7 id\cf2 : \cf8 Optional\cf2 [\cf7 int\cf2 ] = Field(default=\cf5 None\cf2 , primary_key=\cf5 True\cf2 )\
+      chapter_id: \cf7 int\cf2  = Field(foreign_key=\cf6 "chapter.id"\cf2 , index=\cf5 True\cf2 )\
+      signal_type: \cf7 str\cf2           \cf4 #\cf2  \cf4 "click_marker",\cf2  \cf4 "abrupt_cutoff",\cf2 \
+  \cf4 "silence_gap",\cf2  \cf4 "onset_burst"\cf2 \
+      start_ms: \cf7 int\cf2 \
+      end_ms: \cf7 int\cf2 \
+      confidence: \cf7 float\cf2 \
+      \cf4 #\cf2  \cf4 Raw\cf2  \cf4 features\cf2  \cf4 at\cf2  \cf4 detection\cf2  \cf4 point\cf2 \
+      rms_db: \cf8 Optional\cf2 [\cf7 float\cf2 ] = \cf5 None\cf2 \
+      spectral_centroid_hz: \cf8 Optional\cf2 [\cf7 float\cf2 ] = \cf5 None\cf2 \
+      zero_crossing_rate: \cf8 Optional\cf2 [\cf7 float\cf2 ] = \cf5 None\cf2 \
+      onset_strength: \cf8 Optional\cf2 [\cf7 float\cf2 ] = \cf5 None\cf2 \
+      bandwidth_hz: \cf8 Optional\cf2 [\cf7 float\cf2 ] = \cf5 None\cf2 \
+      note: \cf8 Optional\cf2 [\cf7 str\cf2 ] = \cf5 None\cf2 \
+      created_at: datetime = Field(default_factory=utc_now)\
+\
+\
+  \cf5 class\cf2  \cf5 VadSegment(SQLModel,\cf2  \cf5 table=True):\cf2 \
+      \cf6 """Speech\cf2  \cf6 segment\cf2  \cf6 from\cf2  \cf6 Silero\cf2  \cf6 VAD,\cf2  \cf6 independent\cf2  \cf6 of\cf2  \cf6 Whisper."""\cf2 \
+      \cf7 id\cf2 : \cf8 Optional\cf2 [\cf7 int\cf2 ] = Field(default=\cf5 None\cf2 , primary_key=\cf5 True\cf2 )\
+      chapter_id: \cf7 int\cf2  = Field(foreign_key=\cf6 "chapter.id"\cf2 , index=\cf5 True\cf2 )\
+      start_ms: \cf7 int\cf2 \
+      end_ms: \cf7 int\cf2 \
+      speech_probability: \cf7 float\cf2 \
+      created_at: datetime = Field(default_factory=utc_now)\
+\
+\
+  \cf5 class\cf2  \cf5 AltTakeCluster(SQLModel,\cf2  \cf5 table=True):\cf2 \
+      \cf6 """Group\cf2  \cf6 of\cf2  \cf6 issues\cf2  \cf6 that\cf2  \cf6 represent\cf2  \cf6 alternate\cf2  \cf6 takes\cf2  \cf6 of\cf2  \cf6 the\cf2  \cf6 same\cf2  \cf6 text\cf2 \
+  \cf6 span."""\cf2 \
+      \cf7 id\cf2 : \cf8 Optional\cf2 [\cf7 int\cf2 ] = Field(default=\cf5 None\cf2 , primary_key=\cf5 True\cf2 )\
+      chapter_id: \cf7 int\cf2  = Field(foreign_key=\cf6 "chapter.id"\cf2 , index=\cf5 True\cf2 )\
+      manuscript_start_idx: \cf7 int\cf2      \cf4 #\cf2  \cf4 start\cf2  \cf4 index\cf2  \cf4 into\cf2  \cf4 manuscript\cf2  \cf4 tokens\cf2 \
+      manuscript_end_idx: \cf7 int\cf2        \cf4 #\cf2  \cf4 end\cf2  \cf4 index\cf2  \cf4 into\cf2  \cf4 manuscript\cf2  \cf4 tokens\cf2 \
+      manuscript_text: \cf7 str\cf2           \cf4 #\cf2  \cf4 the\cf2  \cf4 text\cf2  \cf4 span\cf2  \cf4 these\cf2  \cf4 takes\cf2  \cf4 cover\cf2 \
+      preferred_issue_id: \cf8 Optional\cf2 [\cf7 int\cf2 ] = Field(default=\cf5 None\cf2 ,\
+  foreign_key=\cf6 "issue.id"\cf2 )\
+      confidence: \cf7 float\cf2 \
+      created_at: datetime = Field(default_factory=utc_now)\
+\
+\
+  \cf5 class\cf2  \cf5 AltTakeMember(SQLModel,\cf2  \cf5 table=True):\cf2 \
+      \cf6 """Links\cf2  \cf6 an\cf2  \cf6 issue\cf2  \cf6 to\cf2  \cf6 an\cf2  \cf6 alt-take\cf2  \cf6 cluster."""\cf2 \
+      \cf7 id\cf2 : \cf8 Optional\cf2 [\cf7 int\cf2 ] = Field(default=\cf5 None\cf2 , primary_key=\cf5 True\cf2 )\
+      cluster_id: \cf7 int\cf2  = Field(foreign_key=\cf6 "alttakecluster.id"\cf2 , index=\cf5 True\cf2 )\
+      issue_id: \cf7 int\cf2  = Field(foreign_key=\cf6 "issue.id"\cf2 , index=\cf5 True\cf2 )\
+      take_order: \cf7 int\cf2               \cf4 #\cf2  \cf4 chronological\cf2  \cf4 order\cf2  \cf4 (1\cf2  \cf4 =\cf2  \cf4 first\cf2  \cf4 take,\cf2  \cf4 2\cf2  \cf4 =\cf2 \
+  \cf4 second,\cf2  \cf4 etc.)\cf2 \
+\
+  
+\f2\b 1b.
+\f1\b0  
+\f2\b Issue
+\f1\b0  
+\f2\b Model
+\f1\b0  
+\f2\b Extension
+\f1\b0  
+\f2\b (new
+\f1\b0  
+\f2\b columns
+\f1\b0  
+\f2\b on
+\f1\b0  
+\f2\b existing
+\f1\b0  
+\f2\b \cf3 Issue\cf2 )
+\f1\b0 \
+\
+  \cf4 #\cf2  \cf4 New\cf2  \cf4 columns\cf2  \cf4 added\cf2  \cf4 to\cf2  \cf4 existing\cf2  \cf4 Issue\cf2  \cf4 table\cf2  \cf4 via\cf2  \cf4 Alembic\cf2  \cf4 migration:\cf2 \
+\
+  \cf5 class\cf2  \cf5 Issue(SQLModel,\cf2  \cf5 table=True):\cf2 \
+      \cf4 #\cf2  \cf4 ...\cf2  \cf4 all\cf2  \cf4 existing\cf2  \cf4 fields\cf2  \cf4 unchanged\cf2  \cf4 ...\cf2 \
+\
+      \cf4 #\cf2  \cf4 NEW:\cf2  \cf4 Audio\cf2  \cf4 signal\cf2  \cf4 features\cf2  \cf4 (raw,\cf2  \cf4 per-segment)\cf2 \
+      audio_features_json: \cf8 Optional\cf2 [\cf7 str\cf2 ] = \cf5 None\cf2     \cf4 #\cf2  \cf4 JSON\cf2  \cf4 blob:\cf2  \cf4 AudioFeatures\cf2 \
+      \cf4 #\cf2  \cf4 NEW:\cf2  \cf4 Derived\cf2  \cf4 audio\cf2  \cf4 signal\cf2  \cf4 flags\cf2 \
+      audio_signals_json: \cf8 Optional\cf2 [\cf7 str\cf2 ] = \cf5 None\cf2      \cf4 #\cf2  \cf4 JSON\cf2  \cf4 blob:\cf2  \cf4 AudioSignals\cf2 \
+      \cf4 #\cf2  \cf4 NEW:\cf2  \cf4 Prosody\cf2  \cf4 features\cf2  \cf4 (raw,\cf2  \cf4 per-segment)\cf2 \
+      prosody_features_json: \cf8 Optional\cf2 [\cf7 str\cf2 ] = \cf5 None\cf2   \cf4 #\cf2  \cf4 JSON\cf2  \cf4 blob:\cf2  \cf4 ProsodyFeatures\cf2 \
+      \cf4 #\cf2  \cf4 NEW:\cf2  \cf4 Alt-take\cf2  \cf4 cluster\cf2  \cf4 membership\cf2 \
+      alt_take_cluster_id: \cf8 Optional\cf2 [\cf7 int\cf2 ] = Field(default=\cf5 None\cf2 ,\
+  foreign_key=\cf6 "alttakecluster.id"\cf2 )\
+\
+  
+\f2\b 1c.
+\f1\b0  
+\f2\b TypeScript
+\f1\b0  
+\f2\b Interfaces
+\f1\b0  
+\f2\b (\cf3 types.ts\cf2  additions)
+\f1\b0 \
+\
+  \cf4 //\cf2  \cf4 ---\cf2  \cf4 RAW\cf2  \cf4 FEATURES\cf2  \cf4 (preserved\cf2  \cf4 separately\cf2  \cf4 from\cf2  \cf4 detector\cf2  \cf4 outputs)\cf2  \cf4 ---\cf2 \
+\
+  \cf5 export\cf2  \cf5 type\cf2  AudioFeatures = \{\
+    \cf7 rms_db\cf2 : \cf7 number\cf2 \
+    \cf7 rms_db_contour\cf2 : \cf7 number\cf2 []       \cf4 //\cf2  \cf4 per-frame\cf2  \cf4 RMS\cf2  \cf4 over\cf2  \cf4 the\cf2  \cf4 segment\cf2 \
+    \cf7 spectral_centroid_hz\cf2 : \cf7 number\cf2 \
+    \cf7 zero_crossing_rate\cf2 : \cf7 number\cf2 \
+    \cf7 onset_strength_max\cf2 : \cf7 number\cf2 \
+    \cf7 onset_strength_mean\cf2 : \cf7 number\cf2 \
+    \cf7 bandwidth_hz\cf2 : \cf7 number\cf2 \
+    \cf7 crest_factor\cf2 : \cf7 number\cf2            \cf4 //\cf2  \cf4 peak\cf2  \cf4 /\cf2  \cf4 RMS\cf2  \cf4 \'97\cf2  \cf4 high\cf2  \cf4 =\cf2  \cf4 transient\cf2 \
+  \}\
+\
+  \cf5 export\cf2  \cf5 type\cf2  ProsodyFeatures = \{\
+    \cf7 duration_ms\cf2 : \cf7 number\cf2 \
+    \cf7 speech_rate_wps\cf2 : \cf7 number\cf2         \cf4 //\cf2  \cf4 words\cf2  \cf4 per\cf2  \cf4 second\cf2 \
+    \cf7 f0_mean_hz\cf2 : \cf7 number\cf2  | \cf5 null\cf2       \cf4 //\cf2  \cf4 fundamental\cf2  \cf4 frequency\cf2  \cf4 (pyin)\cf2 \
+    \cf7 f0_std_hz\cf2 : \cf7 number\cf2  | \cf5 null\cf2 \
+    \cf7 f0_contour\cf2 : \cf7 number\cf2 []           \cf4 //\cf2  \cf4 per-frame\cf2  \cf4 F0\cf2 \
+    \cf7 energy_contour\cf2 : \cf7 number\cf2 []       \cf4 //\cf2  \cf4 per-frame\cf2  \cf4 RMS\cf2  \cf4 energy\cf2 \
+    \cf7 pause_before_ms\cf2 : \cf7 number\cf2 \
+    \cf7 pause_after_ms\cf2 : \cf7 number\cf2 \
+  \}\
+\
+  \cf4 //\cf2  \cf4 ---\cf2  \cf4 DERIVED\cf2  \cf4 DETECTOR\cf2  \cf4 OUTPUTS\cf2  \cf4 ---\cf2 \
+\
+  \cf5 export\cf2  \cf5 type\cf2  AudioSignals = \{\
+    \cf7 has_click_marker\cf2 : \cf7 boolean\cf2 \
+    \cf7 click_marker_confidence\cf2 : \cf7 number\cf2 \
+    \cf7 has_abrupt_cutoff\cf2 : \cf7 boolean\cf2 \
+    \cf7 has_silence_gap\cf2 : \cf7 boolean\cf2 \
+    \cf7 silence_gap_ms\cf2 : \cf7 number\cf2 \
+    \cf7 has_onset_burst\cf2 : \cf7 boolean\cf2 \
+    \cf7 restart_pattern_detected\cf2 : \cf7 boolean\cf2 \
+  \}\
+\
+  \cf4 //\cf2  \cf4 ---\cf2  \cf4 COMPOSITE\cf2  \cf4 STRUCTURES\cf2  \cf4 ---\cf2 \
+\
+  \cf5 export\cf2  \cf5 type\cf2  AudioSignalRecord = \{\
+    \cf7 id\cf2 : \cf7 number\cf2 \
+    \cf7 chapter_id\cf2 : \cf7 number\cf2 \
+    \cf7 signal_type\cf2 : \cf6 'click_marker'\cf2  | \cf6 'abrupt_cutoff'\cf2  | \cf6 'silence_gap'\cf2  |\
+  \cf6 'onset_burst'\cf2 \
+    \cf7 start_ms\cf2 : \cf7 number\cf2 \
+    \cf7 end_ms\cf2 : \cf7 number\cf2 \
+    \cf7 confidence\cf2 : \cf7 number\cf2 \
+    \cf7 rms_db\cf2 : \cf7 number\cf2  | \cf5 null\cf2 \
+    \cf7 spectral_centroid_hz\cf2 : \cf7 number\cf2  | \cf5 null\cf2 \
+    \cf7 zero_crossing_rate\cf2 : \cf7 number\cf2  | \cf5 null\cf2 \
+    \cf7 onset_strength\cf2 : \cf7 number\cf2  | \cf5 null\cf2 \
+    \cf7 bandwidth_hz\cf2 : \cf7 number\cf2  | \cf5 null\cf2 \
+    \cf7 note\cf2 : \cf7 string\cf2  | \cf5 null\cf2 \
+  \}\
+\
+  \cf5 export\cf2  \cf5 type\cf2  VadSegment = \{\
+    \cf7 id\cf2 : \cf7 number\cf2 \
+    \cf7 chapter_id\cf2 : \cf7 number\cf2 \
+    \cf7 start_ms\cf2 : \cf7 number\cf2 \
+    \cf7 end_ms\cf2 : \cf7 number\cf2 \
+    \cf7 speech_probability\cf2 : \cf7 number\cf2 \
+  \}\
+\
+  \cf5 export\cf2  \cf5 type\cf2  AltTakeCluster = \{\
+    \cf7 id\cf2 : \cf7 number\cf2 \
+    \cf7 chapter_id\cf2 : \cf7 number\cf2 \
+    \cf7 manuscript_start_idx\cf2 : \cf7 number\cf2 \
+    \cf7 manuscript_end_idx\cf2 : \cf7 number\cf2 \
+    \cf7 manuscript_text\cf2 : \cf7 string\cf2 \
+    \cf7 preferred_issue_id\cf2 : \cf7 number\cf2  | \cf5 null\cf2 \
+    \cf7 confidence\cf2 : \cf7 number\cf2 \
+    \cf7 members\cf2 : AltTakeMember[]\
+  \}\
+\
+  \cf5 export\cf2  \cf5 type\cf2  AltTakeMember = \{\
+    \cf7 id\cf2 : \cf7 number\cf2 \
+    \cf7 cluster_id\cf2 : \cf7 number\cf2 \
+    \cf7 issue_id\cf2 : \cf7 number\cf2 \
+    \cf7 take_order\cf2 : \cf7 number\cf2 \
+  \}\
+\
+  \cf4 //\cf2  \cf4 Extended\cf2  \cf4 Issue\cf2  \cf4 type\cf2  \cf4 (backwards\cf2  \cf4 compatible\cf2  \cf4 \'97\cf2  \cf4 all\cf2  \cf4 new\cf2  \cf4 fields\cf2  \cf4 optional)\cf2 \
+  \cf5 export\cf2  \cf5 type\cf2  Issue = \{\
+    \cf4 //\cf2  \cf4 ...\cf2  \cf4 all\cf2  \cf4 existing\cf2  \cf4 fields\cf2  \cf4 ...\cf2 \
+    audio_features?: AudioFeatures | \cf5 null\cf2 \
+    audio_signals?: AudioSignals | \cf5 null\cf2 \
+    prosody_features?: ProsodyFeatures | \cf5 null\cf2 \
+    alt_take_cluster_id?: \cf7 number\cf2  | \cf5 null\cf2 \
+  \}\
+\
+  \cf4 //\cf2  \cf4 NEW\cf2  \cf4 issue\cf2  \cf4 types\cf2 \
+  \cf5 export\cf2  \cf5 type\cf2  IssueType =\
+    | \cf6 'false_start'\cf2 \
+    | \cf6 'repetition'\cf2 \
+    | \cf6 'pickup_restart'\cf2 \
+    | \cf6 'substitution'\cf2 \
+    | \cf6 'missing_text'\cf2 \
+    | \cf6 'long_pause'\cf2 \
+    | \cf6 'uncertain_alignment'\cf2 \
+    \cf4 //\cf2  \cf4 NEW:\cf2 \
+    | \cf6 'pickup_candidate'\cf2      \cf4 //\cf2  \cf4 VAD\cf2  \cf4 +\cf2  \cf4 audio\cf2  \cf4 signals\cf2  \cf4 suggest\cf2  \cf4 restart\cf2  \cf4 without\cf2  \cf4 text\cf2 \
+  \cf4  match\cf2 \
+    | \cf6 'alt_take'\cf2              \cf4 //\cf2  \cf4 segment\cf2  \cf4 is\cf2  \cf4 part\cf2  \cf4 of\cf2  \cf4 an\cf2  \cf4 alternate\cf2  \cf4 take\cf2  \cf4 cluster\cf2 \
+    | \cf6 'performance_variant'\cf2   \cf4 //\cf2  \cf4 same\cf2  \cf4 text,\cf2  \cf4 different\cf2  \cf4 prosody\cf2  \cf4 (pacing,\cf2  \cf4 energy,\cf2 \
+  \cf4 pitch)\cf2 \
+    | \cf6 'non_speech_marker'\cf2     \cf4 //\cf2  \cf4 click,\cf2  \cf4 clap,\cf2  \cf4 or\cf2  \cf4 intentional\cf2  \cf4 edit\cf2  \cf4 signal\cf2 \
+\
+  ---\
+  
+\f2\b 2.
+\f1\b0  
+\f2\b Module
+\f1\b0  
+\f2\b Breakdown
+\f1\b0 \
+\
+  
+\f2\b New
+\f1\b0  
+\f2\b Files
+\f1\b0 \
+\
+  \uc0\u9484 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9516 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \
+  \uc0\u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9488 \
+  \uc0\u9474             File            \u9474                         Responsibility\
+                \uc0\u9474 \
+  \uc0\u9500 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9532 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \
+  \uc0\u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9508 \
+  \uc0\u9474  \cf3 services/audio_analysis.py\cf2  \uc0\u9474  Audio signal extraction (RMS, ZCR, centroid,\
+  onsets, clicks) \uc0\u9474 \
+  \uc0\u9500 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9532 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \
+  \uc0\u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9508 \
+  \uc0\u9474  \cf3 services/vad.py\cf2             \uc0\u9474  Silero VAD speech boundary detection\
+                \uc0\u9474 \
+  \uc0\u9500 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9532 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \
+  \uc0\u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9508 \
+  \uc0\u9474  \cf3 services/prosody.py\cf2         \uc0\u9474  Per-segment prosody feature extraction\
+                \uc0\u9474 \
+  \uc0\u9500 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9532 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \
+  \uc0\u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9508 \
+  \uc0\u9474  \cf3 services/alt_takes.py\cf2       \uc0\u9474  Alternate take clustering logic\
+                \uc0\u9474 \
+  \uc0\u9500 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9532 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \
+  \uc0\u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9508 \
+  \uc0\u9474  \cf3 services/signal_fusion.py\cf2   \uc0\u9474  Merge all signals into enriched issues\
+                \uc0\u9474 \
+  \uc0\u9500 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9532 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \
+  \uc0\u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9508 \
+  \uc0\u9474  \cf3 detection_config.py\cf2         \uc0\u9474  Extended with new signal thresholds (additions\
+  only)         \uc0\u9474 \
+  \uc0\u9492 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9524 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \
+  \uc0\u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9496 \
+\
+  
+\f2\b Existing
+\f1\b0  
+\f2\b Files
+\f1\b0  
+\f2\b Modified
+\f1\b0 \
+\
+  \uc0\u9484 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9516 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \
+  \uc0\u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9488 \
+  \uc0\u9474             File             \u9474                             Change\
+                  \uc0\u9474 \
+  \uc0\u9500 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9532 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \
+  \uc0\u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9508 \
+  \uc0\u9474  \cf3 models.py\cf2                    \uc0\u9474  Add \cf3 AudioSignal\cf2 , \cf3 VadSegment\cf2 , \cf3 AltTakeCluster\cf2 ,\
+  \cf3 AltTakeMember\cf2  +  \uc0\u9474 \
+  \uc0\u9474                              \u9474  Issue columns\
+                  \uc0\u9474 \
+  \uc0\u9500 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9532 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \
+  \uc0\u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9508 \
+  \uc0\u9474  \cf3 pipeline/analyze_chapter.py\cf2  \uc0\u9474  Insert new analysis steps between \cf3 align\cf2  and\
+  \cf3 detect_issues\cf2      \uc0\u9474 \
+  \uc0\u9500 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9532 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \
+  \uc0\u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9508 \
+  \uc0\u9474  \cf3 services/detect.py\cf2           \uc0\u9474  Accept enrichment data, add new classification\
+   types          \uc0\u9474 \
+  \uc0\u9500 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9532 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \
+  \uc0\u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9508 \
+  \uc0\u9474  \cf3 services/export.py\cf2           \uc0\u9474  Add \cf3 alt_take\cf2  and \cf3 non_speech_marker\cf2  to\
+  \cf3 CUTTABLE_ISSUE_TYPES\cf2     \uc0\u9474 \
+  \uc0\u9500 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9532 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \
+  \uc0\u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9508 \
+  \uc0\u9474  \cf3 apps/web/src/types.ts\cf2        \uc0\u9474  Add new interfaces\
+                  \uc0\u9474 \
+  \uc0\u9500 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9532 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \
+  \uc0\u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9508 \
+  \uc0\u9474  \cf3 apps/web/src/utils.ts\cf2        \uc0\u9474  Add metadata for new issue types\
+                  \uc0\u9474 \
+  \uc0\u9492 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9524 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \
+  \uc0\u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9496 \
+\
+  ---\
+  
+\f2\b 3.
+\f1\b0  
+\f2\b Processing
+\f1\b0  
+\f2\b Pipeline
+\f1\b0  
+\f2\b Flow
+\f1\b0 \
+\
+  Updated \cf3 analyze_chapter.py\cf2  \'97 new steps inserted, existing steps untouched:\
+\
+  \cf5 def\cf9  run_analysis(session,\cf2  \cf9 chapter,\cf2  \cf9 job,\cf2  \cf9 ...):\cf2 \
+      \cf4 #\cf2  \cf4 ===\cf2  \cf4 EXISTING\cf2  \cf4 STEPS\cf2  \cf4 (unchanged)\cf2  \cf4 ===\cf2 \
+      dirs = ensure_chapter_dirs(...)\
+      set_job_progress(session, job, \cf4 10\cf2 , \cf6 "prepare_inputs"\cf2 )\
+      working_audio_path = prepare_working_audio_copy(...)\
+      manuscript_tokens = build_manuscript_tokens(...)\
+\
+      set_job_progress(session, job, \cf4 35\cf2 , \cf6 "transcribe"\cf2 )\
+      transcript = transcribe_with_whisperx(...)\
+\
+      spoken_tokens = build_spoken_tokens(transcript)\
+\
+      set_job_progress(session, job, \cf4 55\cf2 , \cf6 "align"\cf2 )\
+      alignment = build_alignment(manuscript_tokens, spoken_tokens)\
+\
+      \cf4 #\cf2  \cf4 ===\cf2  \cf4 NEW\cf2  \cf4 STEPS\cf2  \cf4 (inserted\cf2  \cf4 before\cf2  \cf4 detect_issues)\cf2  \cf4 ===\cf2 \
+\
+      set_job_progress(session, job, \cf4 60\cf2 , \cf6 "audio_analysis"\cf2 )\
+      audio_signals = analyze_audio_signals(working_audio_path)\
+      write_json_artifact(dirs[\cf6 "analysis"\cf2 ] / \cf6 "audio_signals.json"\cf2 ,\
+  audio_signals)\
+\
+      set_job_progress(session, job, \cf4 65\cf2 , \cf6 "vad"\cf2 )\
+      vad_segments = run_vad(working_audio_path)\
+      write_json_artifact(dirs[\cf6 "analysis"\cf2 ] / \cf6 "vad_segments.json"\cf2 , vad_segments)\
+\
+      set_job_progress(session, job, \cf4 70\cf2 , \cf6 "prosody"\cf2 )\
+      prosody_map = extract_prosody(working_audio_path, spoken_tokens)\
+      write_json_artifact(dirs[\cf6 "analysis"\cf2 ] / \cf6 "prosody_features.json"\cf2 ,\
+  prosody_map)\
+\
+      \cf4 #\cf2  \cf4 ===\cf2  \cf4 EXISTING\cf2  \cf4 STEP\cf2  \cf4 (extended)\cf2  \cf4 ===\cf2 \
+\
+      set_job_progress(session, job, \cf4 75\cf2 , \cf6 "detect_issues"\cf2 )\
+      issue_records = build_issue_records(\
+          chapter=chapter,\
+          transcript=transcript,\
+          manuscript_tokens=manuscript_tokens,\
+          spoken_tokens=spoken_tokens,\
+          alignment=alignment,\
+          \cf4 #\cf2  \cf4 NEW\cf2  \cf4 parameters\cf2  \cf4 \'97\cf2  \cf4 existing\cf2  \cf4 callers\cf2  \cf4 unaffected\cf2  \cf4 (all\cf2  \cf4 Optional)\cf2 \
+          audio_signals=audio_signals,\
+          vad_segments=vad_segments,\
+          prosody_map=prosody_map,\
+      )\
+\
+      \cf4 #\cf2  \cf4 ===\cf2  \cf4 NEW\cf2  \cf4 STEP\cf2  \cf4 ===\cf2 \
+\
+      set_job_progress(session, job, \cf4 80\cf2 , \cf6 "alt_take_clustering"\cf2 )\
+      alt_take_clusters = detect_alt_takes(\
+          issue_records, manuscript_tokens, spoken_tokens, alignment,\
+  prosody_map\
+      )\
+      write_json_artifact(dirs[\cf6 "analysis"\cf2 ] / \cf6 "alt_take_clusters.json"\cf2 ,\
+  alt_take_clusters)\
+\
+      \cf4 #\cf2  \cf4 ===\cf2  \cf4 EXISTING\cf2  \cf4 STEPS\cf2  \cf4 (unchanged)\cf2  \cf4 ===\cf2 \
+\
+      set_job_progress(session, job, \cf4 85\cf2 , \cf6 "triage_issues"\cf2 )\
+      \cf4 #\cf2  \cf4 ...\cf2  \cf4 LLM\cf2  \cf4 triage\cf2  \cf4 (unchanged)\cf2  \cf4 ...\cf2 \
+\
+      persist_issue_models(session, chapter.\cf7 id\cf2 , issue_records)\
+      persist_audio_signals(session, chapter.\cf7 id\cf2 , audio_signals)\
+      persist_vad_segments(session, chapter.\cf7 id\cf2 , vad_segments)\
+      persist_alt_take_clusters(session, chapter.\cf7 id\cf2 , alt_take_clusters)\
+      \cf4 #\cf2  \cf4 ...\cf2  \cf4 rest\cf2  \cf4 unchanged\cf2  \cf4 ...\cf2 \
+\
+  ---\
+  
+\f2\b 4.
+\f1\b0  
+\f2\b Pseudocode
+\f1\b0  
+\f2\b for
+\f1\b0  
+\f2\b Core
+\f1\b0  
+\f2\b Algorithms
+\f1\b0 \
+\
+  
+\f2\b 4a.
+\f1\b0  
+\f2\b Click
+\f1\b0  
+\f2\b Marker
+\f1\b0  
+\f2\b Detection
+\f1\b0  
+\f2\b (\cf3 services/audio_analysis.py\cf2 )
+\f1\b0 \
+\
+  \cf5 import\cf2  numpy \cf5 as\cf2  np\
+  \cf5 import\cf2  librosa\
+\
+  \cf4 #\cf2  \cf4 Thresholds\cf2  \cf4 (added\cf2  \cf4 to\cf2  \cf4 detection_config.py)\cf2 \
+  CLICK_MIN_DURATION_MS = \cf4 5\cf2 \
+  CLICK_MAX_DURATION_MS = \cf4 80\cf2 \
+  CLICK_CREST_FACTOR_THRESHOLD = \cf4 12.0\cf2       \cf4 #\cf2  \cf4 dB\cf2  \cf4 \'97\cf2  \cf4 peak/RMS\cf2  \cf4 ratio\cf2 \
+  CLICK_SPECTRAL_CENTROID_MIN_HZ = \cf4 2000\cf2     \cf4 #\cf2  \cf4 clicks\cf2  \cf4 are\cf2  \cf4 broadband/high-freq\cf2 \
+  CLICK_ZCR_THRESHOLD = \cf4 0.3\cf2 \
+  CLICK_ONSET_STRENGTH_THRESHOLD = \cf4 3.0\cf2      \cf4 #\cf2  \cf4 relative\cf2  \cf4 to\cf2  \cf4 mean\cf2  \cf4 onset\cf2  \cf4 strength\cf2 \
+\
+  \cf5 def\cf9  analyze_audio_signals(audio_path:\cf2  \cf9 Path,\cf2  \cf9 sr:\cf2  \cf7 int\cf9  =\cf2  \cf4 22050\cf9 )\cf2  \cf9 ->\cf2  \cf7 list\cf9 [\cf7 dict\cf9 ]:\cf2 \
+      \cf6 """Extract\cf2  \cf6 raw\cf2  \cf6 features\cf2  \cf6 and\cf2  \cf6 detect\cf2  \cf6 audio\cf2  \cf6 signals.\cf2  \cf6 Returns\cf2  \cf6 list\cf2  \cf6 of\cf2  \cf6 signal\cf2 \
+  \cf6 dicts."""\cf2 \
+      y, sr = librosa.load(\cf7 str\cf2 (audio_path), sr=sr, mono=\cf5 True\cf2 )\
+\
+      \cf4 #\cf2  \cf4 Compute\cf2  \cf4 global\cf2  \cf4 features\cf2  \cf4 (used\cf2  \cf4 for\cf2  \cf4 normalization)\cf2 \
+      hop_length = \cf4 512\cf2 \
+      frame_length = \cf4 2048\cf2 \
+\
+      rms = librosa.feature.rms(y=y, frame_length=frame_length,\
+  hop_length=hop_length)[\cf4 0\cf2 ]\
+      centroid = librosa.feature.spectral_centroid(y=y, sr=sr,\
+  hop_length=hop_length)[\cf4 0\cf2 ]\
+      zcr = librosa.feature.zero_crossing_rate(y=y, frame_length=frame_length,\
+  hop_length=hop_length)[\cf4 0\cf2 ]\
+      onset_env = librosa.onset.onset_strength(y=y, sr=sr,\
+  hop_length=hop_length)\
+      onsets = librosa.onset.onset_detect(\
+          y=y, sr=sr, hop_length=hop_length, onset_envelope=onset_env,\
+  units=\cf6 'frames'\cf2 \
+      )\
+\
+      signals = []\
+      mean_onset = \cf7 float\cf2 (np.mean(onset_env)) \cf5 if\cf2  \cf7 len\cf2 (onset_env) > \cf4 0\cf2  \cf5 else\cf2  \cf4 1.0\cf2 \
+      mean_rms = \cf7 float\cf2 (np.mean(rms)) \cf5 if\cf2  \cf7 len\cf2 (rms) > \cf4 0\cf2  \cf5 else\cf2  \cf4 1e-6\cf2 \
+\
+      \cf5 for\cf2  onset_frame \cf5 in\cf2  onsets:\
+          \cf4 #\cf2  \cf4 Extract\cf2  \cf4 local\cf2  \cf4 window\cf2  \cf4 around\cf2  \cf4 onset\cf2  \cf4 (\'b140ms)\cf2 \
+          center_sample = onset_frame * hop_length\
+          window_samples = \cf7 int\cf2 (\cf4 0.04\cf2  * sr)\
+          start_sample = \cf7 max\cf2 (\cf4 0\cf2 , center_sample - window_samples)\
+          end_sample = \cf7 min\cf2 (\cf7 len\cf2 (y), center_sample + window_samples)\
+          segment = y[start_sample:end_sample]\
+\
+          \cf5 if\cf2  \cf7 len\cf2 (segment) < \cf4 64\cf2 :\
+              \cf5 continue\cf2 \
+\
+          \cf4 #\cf2  \cf4 Raw\cf2  \cf4 features\cf2  \cf4 at\cf2  \cf4 this\cf2  \cf4 onset\cf2 \
+          local_rms = \cf7 float\cf2 (np.sqrt(np.mean(segment ** \cf4 2\cf2 )))\
+          local_peak = \cf7 float\cf2 (np.\cf7 max\cf2 (np.\cf7 abs\cf2 (segment)))\
+          crest_factor_db = \cf4 20\cf2  * np.log10(local_peak / \cf7 max\cf2 (local_rms, \cf4 1e-10\cf2 ))\
+          local_centroid = \cf7 float\cf2 (centroid[\cf7 min\cf2 (onset_frame, \cf7 len\cf2 (centroid) - \cf4 1\cf2 )])\
+          local_zcr = \cf7 float\cf2 (zcr[\cf7 min\cf2 (onset_frame, \cf7 len\cf2 (zcr) - \cf4 1\cf2 )])\
+          local_onset_strength = \cf7 float\cf2 (onset_env[\cf7 min\cf2 (onset_frame, \cf7 len\cf2 (onset_env)\
+   - \cf4 1\cf2 )])\
+\
+          start_ms = \cf7 int\cf2 (start_sample / sr * \cf4 1000\cf2 )\
+          end_ms = \cf7 int\cf2 (end_sample / sr * \cf4 1000\cf2 )\
+          duration_ms = end_ms - start_ms\
+\
+          \cf4 #\cf2  \cf4 ---\cf2  \cf4 CLICK\cf2  \cf4 MARKER\cf2  \cf4 DETECTION\cf2  \cf4 ---\cf2 \
+          is_click = (\
+              CLICK_MIN_DURATION_MS <= duration_ms <= CLICK_MAX_DURATION_MS\
+              \cf5 and\cf2  crest_factor_db >= CLICK_CREST_FACTOR_THRESHOLD\
+              \cf5 and\cf2  local_centroid >= CLICK_SPECTRAL_CENTROID_MIN_HZ\
+              \cf5 and\cf2  local_zcr >= CLICK_ZCR_THRESHOLD\
+              \cf5 and\cf2  local_onset_strength >= CLICK_ONSET_STRENGTH_THRESHOLD *\
+  mean_onset\
+          )\
+\
+          \cf5 if\cf2  is_click:\
+              confidence = \cf7 min\cf2 (\cf4 1.0\cf2 , \cf4 0.5\cf2 \
+                  + \cf4 0.15\cf2  * \cf7 min\cf2 ((crest_factor_db - CLICK_CREST_FACTOR_THRESHOLD)\
+  / \cf4 6.0\cf2 , \cf4 1.0\cf2 )\
+                  + \cf4 0.15\cf2  * \cf7 min\cf2 ((local_centroid - CLICK_SPECTRAL_CENTROID_MIN_HZ)\
+   / \cf4 4000\cf2 , \cf4 1.0\cf2 )\
+                  + \cf4 0.20\cf2  * \cf7 min\cf2 (local_onset_strength /\
+  (CLICK_ONSET_STRENGTH_THRESHOLD * mean_onset * \cf4 2\cf2 ), \cf4 1.0\cf2 )\
+              )\
+              signals.append(\{\
+                  \cf6 "signal_type"\cf2 : \cf6 "click_marker"\cf2 ,\
+                  \cf6 "start_ms"\cf2 : start_ms,\
+                  \cf6 "end_ms"\cf2 : end_ms,\
+                  \cf6 "confidence"\cf2 : \cf7 round\cf2 (confidence, \cf4 3\cf2 ),\
+                  \cf4 #\cf2  \cf4 Raw\cf2  \cf4 features\cf2  \cf4 preserved\cf2 \
+                  \cf6 "rms_db"\cf2 : \cf7 round\cf2 (\cf4 20\cf2  * np.log10(\cf7 max\cf2 (local_rms, \cf4 1e-10\cf2 )), \cf4 2\cf2 ),\
+                  \cf6 "spectral_centroid_hz"\cf2 : \cf7 round\cf2 (local_centroid, \cf4 1\cf2 ),\
+                  \cf6 "zero_crossing_rate"\cf2 : \cf7 round\cf2 (local_zcr, \cf4 4\cf2 ),\
+                  \cf6 "onset_strength"\cf2 : \cf7 round\cf2 (local_onset_strength, \cf4 3\cf2 ),\
+                  \cf6 "bandwidth_hz"\cf2 : \cf5 None\cf2 ,  \cf4 #\cf2  \cf4 computed\cf2  \cf4 if\cf2  \cf4 needed\cf2 \
+                  \cf6 "crest_factor_db"\cf2 : \cf7 round\cf2 (crest_factor_db, \cf4 2\cf2 ),\
+              \})\
+\
+          \cf4 #\cf2  \cf4 ---\cf2  \cf4 ABRUPT\cf2  \cf4 CUTOFF\cf2  \cf4 DETECTION\cf2  \cf4 ---\cf2 \
+          \cf4 #\cf2  \cf4 Look\cf2  \cf4 for\cf2  \cf4 sharp\cf2  \cf4 RMS\cf2  \cf4 drop-off\cf2  \cf4 at\cf2  \cf4 end\cf2  \cf4 of\cf2  \cf4 speech\cf2 \
+          \cf5 if\cf2  onset_frame > \cf4 2\cf2 :\
+              prev_rms = \cf7 float\cf2 (rms[onset_frame - \cf4 2\cf2 ])\
+              curr_rms = \cf7 float\cf2 (rms[onset_frame])\
+              \cf5 if\cf2  prev_rms > mean_rms * \cf4 2\cf2  \cf5 and\cf2  curr_rms < mean_rms * \cf4 0.3\cf2 :\
+                  signals.append(\{\
+                      \cf6 "signal_type"\cf2 : \cf6 "abrupt_cutoff"\cf2 ,\
+                      \cf6 "start_ms"\cf2 : start_ms,\
+                      \cf6 "end_ms"\cf2 : end_ms,\
+                      \cf6 "confidence"\cf2 : \cf7 round\cf2 (\cf7 min\cf2 (\cf4 0.9\cf2 , \cf4 0.6\cf2  + \cf4 0.3\cf2  * (prev_rms /\
+  \cf7 max\cf2 (curr_rms, \cf4 1e-10\cf2 ) - \cf4 1\cf2 ) / \cf4 20\cf2 ), \cf4 3\cf2 ),\
+                      \cf6 "rms_db"\cf2 : \cf7 round\cf2 (\cf4 20\cf2  * np.log10(\cf7 max\cf2 (local_rms, \cf4 1e-10\cf2 )), \cf4 2\cf2 ),\
+                      \cf6 "spectral_centroid_hz"\cf2 : \cf7 round\cf2 (local_centroid, \cf4 1\cf2 ),\
+                      \cf6 "zero_crossing_rate"\cf2 : \cf7 round\cf2 (local_zcr, \cf4 4\cf2 ),\
+                      \cf6 "onset_strength"\cf2 : \cf7 round\cf2 (local_onset_strength, \cf4 3\cf2 ),\
+                      \cf6 "bandwidth_hz"\cf2 : \cf5 None\cf2 ,\
+                  \})\
+\
+      \cf5 return\cf2  signals\
+\
+  
+\f2\b 4b.
+\f1\b0  
+\f2\b Alternate
+\f1\b0  
+\f2\b Take
+\f1\b0  
+\f2\b Clustering
+\f1\b0  
+\f2\b (\cf3 services/alt_takes.py\cf2 )
+\f1\b0 \
+\
+  ALT_TAKE_MAX_GAP_MS = \cf4 15000\cf2         \cf4 #\cf2  \cf4 max\cf2  \cf4 time\cf2  \cf4 between\cf2  \cf4 takes\cf2  \cf4 in\cf2  \cf4 same\cf2  \cf4 cluster\cf2 \
+  ALT_TAKE_MIN_TEXT_OVERLAP = \cf4 0.6\cf2      \cf4 #\cf2  \cf4 Jaccard\cf2  \cf4 overlap\cf2  \cf4 threshold\cf2 \
+  ALT_TAKE_MIN_CLUSTER_SIZE = \cf4 2\cf2 \
+\
+  \cf5 def\cf9  detect_alt_takes(\cf2 \
+  \cf9  \cf2    \cf9 issue_records:\cf2  \cf7 list\cf9 [\cf7 dict\cf9 ],\cf2 \
+  \cf9  \cf2    \cf9 manuscript_tokens:\cf2  \cf7 list\cf9 ,\cf2 \
+  \cf9  \cf2    \cf9 spoken_tokens:\cf2  \cf7 list\cf9 ,\cf2 \
+  \cf9  \cf2    \cf9 alignment:\cf2  \cf7 dict\cf9 ,\cf2 \
+  \cf9  \cf2    \cf9 prosody_map:\cf2  \cf7 dict\cf9  |\cf2  \cf5 None\cf9  =\cf2  \cf5 None\cf9 ,\cf2 \
+  \cf9 )\cf2  \cf9 ->\cf2  \cf7 list\cf9 [\cf7 dict\cf9 ]:\cf2 \
+      \cf6 """\cf2 \
+  \cf6  \cf2    \cf6 Cluster\cf2  \cf6 issues\cf2  \cf6 that\cf2  \cf6 represent\cf2  \cf6 alternate\cf2  \cf6 takes\cf2  \cf6 of\cf2  \cf6 the\cf2  \cf6 same\cf2  \cf6 manuscript\cf2  \cf6 span.\cf2 \
+  \cf6  \cf2    \cf6 Returns\cf2  \cf6 list\cf2  \cf6 of\cf2  \cf6 AltTakeCluster\cf2  \cf6 dicts.\cf2 \
+  \cf6  \cf2    \cf6 """\cf2 \
+      \cf4 #\cf2  \cf4 Step\cf2  \cf4 1:\cf2  \cf4 Find\cf2  \cf4 issues\cf2  \cf4 that\cf2  \cf4 map\cf2  \cf4 to\cf2  \cf4 overlapping\cf2  \cf4 manuscript\cf2  \cf4 spans\cf2 \
+      \cf4 #\cf2  \cf4 Candidates:\cf2  \cf4 pickup_restart,\cf2  \cf4 repetition,\cf2  \cf4 false_start,\cf2  \cf4 substitution\cf2 \
+      candidates = []\
+      \cf5 for\cf2  i, issue \cf5 in\cf2  \cf7 enumerate\cf2 (issue_records):\
+          \cf5 if\cf2  issue[\cf6 "type"\cf2 ] \cf5 not\cf2  \cf5 in\cf2  (\cf6 "pickup_restart"\cf2 , \cf6 "repetition"\cf2 ,\
+  \cf6 "false_start"\cf2 , \cf6 "substitution"\cf2 ):\
+              \cf5 continue\cf2 \
+          ms_span = _resolve_manuscript_span(issue, alignment,\
+  manuscript_tokens, spoken_tokens)\
+          \cf5 if\cf2  ms_span \cf5 is\cf2  \cf5 None\cf2 :\
+              \cf5 continue\cf2 \
+          candidates.append(\{\
+              \cf6 "issue_index"\cf2 : i,\
+              \cf6 "issue"\cf2 : issue,\
+              \cf6 "manuscript_start"\cf2 : ms_span[\cf4 0\cf2 ],\
+              \cf6 "manuscript_end"\cf2 : ms_span[\cf4 1\cf2 ],\
+              \cf6 "start_ms"\cf2 : issue[\cf6 "start_ms"\cf2 ],\
+              \cf6 "end_ms"\cf2 : issue[\cf6 "end_ms"\cf2 ],\
+          \})\
+\
+      \cf4 #\cf2  \cf4 Step\cf2  \cf4 2:\cf2  \cf4 Sort\cf2  \cf4 by\cf2  \cf4 time\cf2 \
+      candidates.sort(key=\cf5 lambda\cf2  c: c[\cf6 "start_ms"\cf2 ])\
+\
+      \cf4 #\cf2  \cf4 Step\cf2  \cf4 3:\cf2  \cf4 Greedy\cf2  \cf4 clustering\cf2  \cf4 \'97\cf2  \cf4 merge\cf2  \cf4 candidates\cf2  \cf4 with\cf2  \cf4 overlapping\cf2  \cf4 manuscript\cf2 \
+  \cf4  spans\cf2 \
+      \cf4 #\cf2          \cf4 that\cf2  \cf4 are\cf2  \cf4 within\cf2  \cf4 ALT_TAKE_MAX_GAP_MS\cf2  \cf4 of\cf2  \cf4 each\cf2  \cf4 other\cf2 \
+      clusters = []\
+      used = \cf7 set\cf2 ()\
+\
+      \cf5 for\cf2  i, cand_a \cf5 in\cf2  \cf7 enumerate\cf2 (candidates):\
+          \cf5 if\cf2  i \cf5 in\cf2  used:\
+              \cf5 continue\cf2 \
+          cluster_members = [cand_a]\
+          used.add(i)\
+\
+          \cf5 for\cf2  j, cand_b \cf5 in\cf2  \cf7 enumerate\cf2 (candidates):\
+              \cf5 if\cf2  j \cf5 in\cf2  used \cf5 or\cf2  j <= i:\
+                  \cf5 continue\cf2 \
+              \cf4 #\cf2  \cf4 Time\cf2  \cf4 proximity\cf2  \cf4 check\cf2 \
+              \cf5 if\cf2  cand_b[\cf6 "start_ms"\cf2 ] - cluster_members[-\cf4 1\cf2 ][\cf6 "end_ms"\cf2 ] >\
+  ALT_TAKE_MAX_GAP_MS:\
+                  \cf5 break\cf2   \cf4 #\cf2  \cf4 sorted\cf2  \cf4 by\cf2  \cf4 time,\cf2  \cf4 so\cf2  \cf4 no\cf2  \cf4 more\cf2  \cf4 candidates\cf2 \
+\
+              \cf4 #\cf2  \cf4 Text\cf2  \cf4 overlap\cf2  \cf4 check\cf2  \cf4 (Jaccard\cf2  \cf4 on\cf2  \cf4 manuscript\cf2  \cf4 token\cf2  \cf4 indices)\cf2 \
+              overlap = _manuscript_span_overlap(cand_a, cand_b)\
+              \cf5 if\cf2  overlap >= ALT_TAKE_MIN_TEXT_OVERLAP:\
+                  cluster_members.append(cand_b)\
+                  used.add(j)\
+\
+          \cf5 if\cf2  \cf7 len\cf2 (cluster_members) >= ALT_TAKE_MIN_CLUSTER_SIZE:\
+              cluster = _build_cluster(cluster_members, manuscript_tokens,\
+  prosody_map)\
+              clusters.append(cluster)\
+\
+      \cf4 #\cf2  \cf4 Step\cf2  \cf4 4:\cf2  \cf4 Tag\cf2  \cf4 source\cf2  \cf4 issues\cf2  \cf4 with\cf2  \cf4 cluster\cf2  \cf4 membership\cf2  \cf4 +\cf2  \cf4 new\cf2  \cf4 type\cf2 \
+      \cf5 for\cf2  cluster \cf5 in\cf2  clusters:\
+          \cf5 for\cf2  member \cf5 in\cf2  cluster[\cf6 "members"\cf2 ]:\
+              idx = member[\cf6 "issue_index"\cf2 ]\
+              issue_records[idx][\cf6 "alt_take_cluster_id"\cf2 ] = cluster[\cf6 "id"\cf2 ]\
+              \cf4 #\cf2  \cf4 Reclassify\cf2  \cf4 if\cf2  \cf4 appropriate\cf2 \
+              \cf5 if\cf2  issue_records[idx][\cf6 "type"\cf2 ] \cf5 in\cf2  (\cf6 "pickup_restart"\cf2 , \cf6 "repetition"\cf2 ):\
+                  issue_records[idx][\cf6 "type"\cf2 ] = \cf6 "alt_take"\cf2 \
+\
+      \cf5 return\cf2  clusters\
+\
+\
+  \cf5 def\cf9  _manuscript_span_overlap(a:\cf2  \cf7 dict\cf9 ,\cf2  \cf9 b:\cf2  \cf7 dict\cf9 )\cf2  \cf9 ->\cf2  \cf7 float\cf9 :\cf2 \
+      \cf6 """Jaccard\cf2  \cf6 overlap\cf2  \cf6 of\cf2  \cf6 manuscript\cf2  \cf6 token\cf2  \cf6 index\cf2  \cf6 ranges."""\cf2 \
+      set_a = \cf7 set\cf2 (\cf7 range\cf2 (a[\cf6 "manuscript_start"\cf2 ], a[\cf6 "manuscript_end"\cf2 ]))\
+      set_b = \cf7 set\cf2 (\cf7 range\cf2 (b[\cf6 "manuscript_start"\cf2 ], b[\cf6 "manuscript_end"\cf2 ]))\
+      \cf5 if\cf2  \cf5 not\cf2  set_a \cf5 and\cf2  \cf5 not\cf2  set_b:\
+          \cf5 return\cf2  \cf4 0.0\cf2 \
+      intersection = \cf7 len\cf2 (set_a & set_b)\
+      union = \cf7 len\cf2 (set_a | set_b)\
+      \cf5 return\cf2  intersection / union \cf5 if\cf2  union > \cf4 0\cf2  \cf5 else\cf2  \cf4 0.0\cf2 \
+\
+\
+  \cf5 def\cf9  _build_cluster(members:\cf2  \cf7 list\cf9 [\cf7 dict\cf9 ],\cf2  \cf9 manuscript_tokens,\cf2  \cf9 prosody_map)\cf2  \cf9 ->\cf2 \
+  \cf7 dict\cf9 :\cf2 \
+      \cf6 """Build\cf2  \cf6 an\cf2  \cf6 AltTakeCluster\cf2  \cf6 dict\cf2  \cf6 from\cf2  \cf6 a\cf2  \cf6 list\cf2  \cf6 of\cf2  \cf6 candidate\cf2  \cf6 dicts."""\cf2 \
+      ms_start = \cf7 min\cf2 (m[\cf6 "manuscript_start"\cf2 ] \cf5 for\cf2  m \cf5 in\cf2  members)\
+      ms_end = \cf7 max\cf2 (m[\cf6 "manuscript_end"\cf2 ] \cf5 for\cf2  m \cf5 in\cf2  members)\
+      text_tokens = [_token_text(t) \cf5 for\cf2  t \cf5 in\cf2  manuscript_tokens[ms_start:ms_end]]\
+\
+      cluster_id = \cf6 f"alt_\{ms_start\}_\{ms_end\}"\cf2   \cf4 #\cf2  \cf4 temporary,\cf2  \cf4 DB\cf2  \cf4 assigns\cf2  \cf4 real\cf2  \cf4 ID\cf2 \
+      confidence = _cluster_confidence(members, prosody_map)\
+\
+      \cf5 return\cf2  \{\
+          \cf6 "id"\cf2 : cluster_id,\
+          \cf6 "manuscript_start_idx"\cf2 : ms_start,\
+          \cf6 "manuscript_end_idx"\cf2 : ms_end,\
+          \cf6 "manuscript_text"\cf2 : \cf6 "\cf2  \cf6 "\cf2 .join(text_tokens),\
+          \cf6 "preferred_issue_id"\cf2 : \cf5 None\cf2 ,  \cf4 #\cf2  \cf4 user\cf2  \cf4 selects\cf2  \cf4 in\cf2  \cf4 UI\cf2 \
+          \cf6 "confidence"\cf2 : confidence,\
+          \cf6 "members"\cf2 : [\
+              \{\
+                  \cf6 "issue_index"\cf2 : m[\cf6 "issue_index"\cf2 ],\
+                  \cf6 "issue_id"\cf2 : \cf5 None\cf2 ,  \cf4 #\cf2  \cf4 set\cf2  \cf4 after\cf2  \cf4 persist\cf2 \
+                  \cf6 "take_order"\cf2 : order + \cf4 1\cf2 ,\
+              \}\
+              \cf5 for\cf2  order, m \cf5 in\cf2  \cf7 enumerate\cf2 (members)\
+          ],\
+      \}\
+\
+  
+\f2\b 4c.
+\f1\b0  
+\f2\b Pickup
+\f1\b0  
+\f2\b Detection
+\f1\b0  
+\f2\b Enhancement
+\f1\b0  
+\f2\b (\cf3 services/signal_fusion.py\cf2 )
+\f1\b0 \
+\
+  PICKUP_SILENCE_BEFORE_MS = \cf4 300\cf2      \cf4 #\cf2  \cf4 expect\cf2  \cf4 silence\cf2  \cf4 before\cf2  \cf4 restart\cf2 \
+  PICKUP_CLICK_PROXIMITY_MS = \cf4 2000\cf2    \cf4 #\cf2  \cf4 click\cf2  \cf4 marker\cf2  \cf4 within\cf2  \cf4 2s\cf2  \cf4 suggests\cf2  \cf4 pickup\cf2 \
+\
+  \cf5 def\cf9  detect_pickup_candidates(\cf2 \
+  \cf9  \cf2    \cf9 spoken_tokens:\cf2  \cf7 list\cf9 ,\cf2 \
+  \cf9  \cf2    \cf9 vad_segments:\cf2  \cf7 list\cf9 [\cf7 dict\cf9 ],\cf2 \
+  \cf9  \cf2    \cf9 audio_signals:\cf2  \cf7 list\cf9 [\cf7 dict\cf9 ],\cf2 \
+  \cf9  \cf2    \cf9 existing_issues:\cf2  \cf7 list\cf9 [\cf7 dict\cf9 ],\cf2 \
+  \cf9 )\cf2  \cf9 ->\cf2  \cf7 list\cf9 [\cf7 dict\cf9 ]:\cf2 \
+      \cf6 """\cf2 \
+  \cf6  \cf2    \cf6 Detect\cf2  \cf6 pickup/restart\cf2  \cf6 patterns\cf2  \cf6 using\cf2  \cf6 VAD\cf2  \cf6 gaps\cf2  \cf6 +\cf2  \cf6 audio\cf2  \cf6 signals,\cf2 \
+  \cf6  \cf2    \cf6 independent\cf2  \cf6 of\cf2  \cf6 text\cf2  \cf6 alignment.\cf2 \
+\
+  \cf6  \cf2    \cf6 Logic:\cf2 \
+  \cf6  \cf2    \cf6 1.\cf2  \cf6 Find\cf2  \cf6 VAD\cf2  \cf6 gaps\cf2  \cf6 (silence\cf2  \cf6 between\cf2  \cf6 speech\cf2  \cf6 segments)\cf2  \cf6 >\cf2 \
+  \cf6 PICKUP_SILENCE_BEFORE_MS\cf2 \
+  \cf6  \cf2    \cf6 2.\cf2  \cf6 Check\cf2  \cf6 if\cf2  \cf6 a\cf2  \cf6 click\cf2  \cf6 marker\cf2  \cf6 exists\cf2  \cf6 near\cf2  \cf6 the\cf2  \cf6 gap\cf2 \
+  \cf6  \cf2    \cf6 3.\cf2  \cf6 Check\cf2  \cf6 if\cf2  \cf6 speech\cf2  \cf6 resumes\cf2  \cf6 with\cf2  \cf6 similar\cf2  \cf6 content\cf2  \cf6 to\cf2  \cf6 recent\cf2  \cf6 speech\cf2 \
+  \cf6  \cf2    \cf6 4.\cf2  \cf6 If\cf2  \cf6 multiple\cf2  \cf6 signals\cf2  \cf6 converge\cf2  \cf6 \uc0\u8594 \cf2  \cf6 pickup_candidate\cf2 \
+  \cf6  \cf2    \cf6 """\cf2 \
+      new_issues = []\
+\
+      \cf4 #\cf2  \cf4 Index\cf2  \cf4 click\cf2  \cf4 markers\cf2  \cf4 by\cf2  \cf4 time\cf2  \cf4 for\cf2  \cf4 fast\cf2  \cf4 lookup\cf2 \
+      click_markers = [s \cf5 for\cf2  s \cf5 in\cf2  audio_signals \cf5 if\cf2  s[\cf6 "signal_type"\cf2 ] ==\
+  \cf6 "click_marker"\cf2 ]\
+\
+      \cf5 for\cf2  i \cf5 in\cf2  \cf7 range\cf2 (\cf7 len\cf2 (vad_segments) - \cf4 1\cf2 ):\
+          gap_start = vad_segments[i][\cf6 "end_ms"\cf2 ]\
+          gap_end = vad_segments[i + \cf4 1\cf2 ][\cf6 "start_ms"\cf2 ]\
+          gap_ms = gap_end - gap_start\
+\
+          \cf5 if\cf2  gap_ms < PICKUP_SILENCE_BEFORE_MS:\
+              \cf5 continue\cf2 \
+\
+          \cf4 #\cf2  \cf4 Check\cf2  \cf4 for\cf2  \cf4 click\cf2  \cf4 marker\cf2  \cf4 in/near\cf2  \cf4 this\cf2  \cf4 gap\cf2 \
+          has_click = \cf7 any\cf2 (\
+              \cf7 abs\cf2 (c[\cf6 "start_ms"\cf2 ] - gap_start) < PICKUP_CLICK_PROXIMITY_MS\
+              \cf5 or\cf2  \cf7 abs\cf2 (c[\cf6 "start_ms"\cf2 ] - gap_end) < PICKUP_CLICK_PROXIMITY_MS\
+              \cf5 for\cf2  c \cf5 in\cf2  click_markers\
+          )\
+\
+          \cf4 #\cf2  \cf4 Check\cf2  \cf4 for\cf2  \cf4 abrupt\cf2  \cf4 cutoff\cf2  \cf4 before\cf2  \cf4 gap\cf2 \
+          has_cutoff = \cf7 any\cf2 (\
+              s[\cf6 "signal_type"\cf2 ] == \cf6 "abrupt_cutoff"\cf2 \
+              \cf5 and\cf2  \cf7 abs\cf2 (s[\cf6 "start_ms"\cf2 ] - gap_start) < \cf4 500\cf2 \
+              \cf5 for\cf2  s \cf5 in\cf2  audio_signals\
+          )\
+\
+          \cf4 #\cf2  \cf4 Skip\cf2  \cf4 if\cf2  \cf4 this\cf2  \cf4 gap\cf2  \cf4 already\cf2  \cf4 covered\cf2  \cf4 by\cf2  \cf4 an\cf2  \cf4 existing\cf2  \cf4 issue\cf2 \
+          already_covered = \cf7 any\cf2 (\
+              issue[\cf6 "start_ms"\cf2 ] <= gap_start \cf5 and\cf2  issue[\cf6 "end_ms"\cf2 ] >= gap_end\
+              \cf5 for\cf2  issue \cf5 in\cf2  existing_issues\
+              \cf5 if\cf2  issue[\cf6 "type"\cf2 ] \cf5 in\cf2  (\cf6 "pickup_restart"\cf2 , \cf6 "long_pause"\cf2 )\
+          )\
+          \cf5 if\cf2  already_covered:\
+              \cf5 continue\cf2 \
+\
+          \cf4 #\cf2  \cf4 Score\cf2  \cf4 based\cf2  \cf4 on\cf2  \cf4 converging\cf2  \cf4 signals\cf2 \
+          score = \cf4 0.40\cf2   \cf4 #\cf2  \cf4 base:\cf2  \cf4 silence\cf2  \cf4 gap\cf2  \cf4 exists\cf2 \
+          \cf5 if\cf2  has_click:\
+              score += \cf4 0.30\cf2 \
+          \cf5 if\cf2  has_cutoff:\
+              score += \cf4 0.20\cf2 \
+          \cf5 if\cf2  gap_ms > \cf4 1500\cf2 :\
+              score += \cf4 0.10\cf2   \cf4 #\cf2  \cf4 longer\cf2  \cf4 gaps\cf2  \cf4 more\cf2  \cf4 likely\cf2  \cf4 intentional\cf2  \cf4 restart\cf2 \
+\
+          \cf5 if\cf2  score >= \cf4 0.60\cf2 :\
+              new_issues.append(\{\
+                  \cf6 "type"\cf2 : \cf6 "pickup_candidate"\cf2 ,\
+                  \cf6 "start_ms"\cf2 : gap_start,\
+                  \cf6 "end_ms"\cf2 : gap_end,\
+                  \cf6 "confidence"\cf2 : \cf7 round\cf2 (\cf7 min\cf2 (score, \cf4 0.95\cf2 ), \cf4 3\cf2 ),\
+                  \cf6 "expected_text"\cf2 : \cf6 ""\cf2 ,\
+                  \cf6 "spoken_text"\cf2 : \cf6 ""\cf2 ,\
+                  \cf6 "context_before"\cf2 : \cf6 ""\cf2 ,\
+                  \cf6 "context_after"\cf2 : \cf6 ""\cf2 ,\
+                  \cf6 "note"\cf2 : _pickup_note(has_click, has_cutoff, gap_ms),\
+                  \cf6 "audio_signals"\cf2 : \{\
+                      \cf6 "has_click_marker"\cf2 : has_click,\
+                      \cf6 "click_marker_confidence"\cf2 : \cf7 max\cf2 (\
+                          (c[\cf6 "confidence"\cf2 ] \cf5 for\cf2  c \cf5 in\cf2  click_markers\
+                           \cf5 if\cf2  \cf7 abs\cf2 (c[\cf6 "start_ms"\cf2 ] - gap_start) <\
+  PICKUP_CLICK_PROXIMITY_MS),\
+                          default=\cf4 0.0\cf2 \
+                      ),\
+                      \cf6 "has_abrupt_cutoff"\cf2 : has_cutoff,\
+                      \cf6 "has_silence_gap"\cf2 : \cf5 True\cf2 ,\
+                      \cf6 "silence_gap_ms"\cf2 : gap_ms,\
+                      \cf6 "has_onset_burst"\cf2 : \cf5 False\cf2 ,\
+                      \cf6 "restart_pattern_detected"\cf2 : \cf5 True\cf2 ,\
+                  \},\
+              \})\
+\
+      \cf5 return\cf2  new_issues\
+\
+\
+  \cf5 def\cf9  _pickup_note(has_click,\cf2  \cf9 has_cutoff,\cf2  \cf9 gap_ms):\cf2 \
+      parts = []\
+      \cf5 if\cf2  has_click:\
+          parts.append(\cf6 "Click\cf2  \cf6 marker\cf2  \cf6 detected\cf2  \cf6 near\cf2  \cf6 gap"\cf2 )\
+      \cf5 if\cf2  has_cutoff:\
+          parts.append(\cf6 "Abrupt\cf2  \cf6 cutoff\cf2  \cf6 before\cf2  \cf6 silence"\cf2 )\
+      parts.append(\cf6 f"Silence\cf2  \cf6 gap:\cf2  \cf6 \{gap_ms\}ms"\cf2 )\
+      \cf5 return\cf2  \cf6 ".\cf2  \cf6 "\cf2 .join(parts) + \cf6 "."\cf2 \
+\
+  ---\
+  
+\f2\b 5.
+\f1\b0  
+\f2\b VAD
+\f1\b0  
+\f2\b Module
+\f1\b0  
+\f2\b (\cf3 services/vad.py\cf2 )
+\f1\b0 \
+\
+  \cf5 import\cf2  torch\
+  \cf5 import\cf2  torchaudio\
+\
+  SILERO_VAD_THRESHOLD = \cf4 0.5\cf2 \
+  SILERO_WINDOW_MS = \cf4 30\cf2 \
+\
+  \cf5 def\cf9  run_vad(audio_path:\cf2  \cf9 Path)\cf2  \cf9 ->\cf2  \cf7 list\cf9 [\cf7 dict\cf9 ]:\cf2 \
+      \cf6 """Run\cf2  \cf6 Silero\cf2  \cf6 VAD\cf2  \cf6 and\cf2  \cf6 return\cf2  \cf6 speech\cf2  \cf6 segments."""\cf2 \
+      model, utils = torch.hub.load(\
+          \cf6 'snakers4/silero-vad'\cf2 , \cf6 'silero_vad'\cf2 , trust_repo=\cf5 True\cf2 \
+      )\
+      (get_speech_timestamps, _, read_audio, _, _) = utils\
+\
+      wav = read_audio(\cf7 str\cf2 (audio_path), sampling_rate=\cf4 16000\cf2 )\
+      speech_timestamps = get_speech_timestamps(\
+          wav, model,\
+          threshold=SILERO_VAD_THRESHOLD,\
+          sampling_rate=\cf4 16000\cf2 ,\
+          min_speech_duration_ms=\cf4 250\cf2 ,\
+          min_silence_duration_ms=\cf4 100\cf2 ,\
+          return_seconds=\cf5 False\cf2 ,\
+      )\
+\
+      segments = []\
+      \cf5 for\cf2  ts \cf5 in\cf2  speech_timestamps:\
+          segments.append(\{\
+              \cf6 "start_ms"\cf2 : \cf7 int\cf2 (ts[\cf6 "start"\cf2 ] / \cf4 16\cf2 ),  \cf4 #\cf2  \cf4 samples\cf2  \cf4 at\cf2  \cf4 16kHz\cf2  \cf4 \uc0\u8594 \cf2  \cf4 ms\cf2 \
+              \cf6 "end_ms"\cf2 : \cf7 int\cf2 (ts[\cf6 "end"\cf2 ] / \cf4 16\cf2 ),\
+              \cf6 "speech_probability"\cf2 : SILERO_VAD_THRESHOLD,  \cf4 #\cf2  \cf4 Silero\cf2  \cf4 binary\cf2  \cf4 above\cf2 \
+  \cf4  threshold\cf2 \
+          \})\
+\
+      \cf5 return\cf2  segments\
+\
+  ---\
+  
+\f2\b 6.
+\f1\b0  
+\f2\b Prosody
+\f1\b0  
+\f2\b Module
+\f1\b0  
+\f2\b (\cf3 services/prosody.py\cf2 )
+\f1\b0 \
+\
+  \cf5 import\cf2  numpy \cf5 as\cf2  np\
+  \cf5 import\cf2  librosa\
+\
+  \cf5 def\cf9  extract_prosody(audio_path:\cf2  \cf9 Path,\cf2  \cf9 spoken_tokens:\cf2  \cf7 list\cf9 )\cf2  \cf9 ->\cf2  \cf7 dict\cf9 :\cf2 \
+      \cf6 """\cf2 \
+  \cf6  \cf2    \cf6 Extract\cf2  \cf6 per-token\cf2  \cf6 prosody\cf2  \cf6 features.\cf2 \
+  \cf6  \cf2    \cf6 Returns\cf2  \cf6 dict\cf2  \cf6 keyed\cf2  \cf6 by\cf2  \cf6 token\cf2  \cf6 index\cf2  \cf6 \uc0\u8594 \cf2  \cf6 ProsodyFeatures.\cf2 \
+  \cf6  \cf2    \cf6 """\cf2 \
+      y, sr = librosa.load(\cf7 str\cf2 (audio_path), sr=\cf4 22050\cf2 , mono=\cf5 True\cf2 )\
+\
+      prosody_map = \{\}\
+      \cf5 for\cf2  i, token \cf5 in\cf2  \cf7 enumerate\cf2 (spoken_tokens):\
+          start_ms = _token_start_ms(token)\
+          end_ms = _token_end_ms(token)\
+          \cf5 if\cf2  end_ms <= start_ms:\
+              \cf5 continue\cf2 \
+\
+          \cf4 #\cf2  \cf4 Extract\cf2  \cf4 segment\cf2  \cf4 audio\cf2 \
+          start_sample = \cf7 int\cf2 (start_ms / \cf4 1000\cf2  * sr)\
+          end_sample = \cf7 int\cf2 (end_ms / \cf4 1000\cf2  * sr)\
+          segment = y[start_sample:end_sample]\
+\
+          \cf5 if\cf2  \cf7 len\cf2 (segment) < \cf4 512\cf2 :\
+              \cf5 continue\cf2 \
+\
+          duration_ms = end_ms - start_ms\
+          word_count = \cf7 len\cf2 (\cf7 str\cf2 (token.get(\cf6 "text"\cf2 , \cf6 ""\cf2 )).split()) \cf5 if\cf2 \
+  \cf7 isinstance\cf2 (token, \cf7 dict\cf2 ) \cf5 else\cf2  \cf4 1\cf2 \
+          speech_rate = word_count / (duration_ms / \cf4 1000\cf2 ) \cf5 if\cf2  duration_ms > \cf4 0\cf2 \
+  \cf5 else\cf2  \cf4 0\cf2 \
+\
+          \cf4 #\cf2  \cf4 F0\cf2  \cf4 via\cf2  \cf4 pyin\cf2 \
+          f0, voiced_flag, voiced_probs = librosa.pyin(\
+              segment, fmin=\cf4 50\cf2 , fmax=\cf4 500\cf2 , sr=sr\
+          )\
+          f0_valid = f0[~np.isnan(f0)] \cf5 if\cf2  f0 \cf5 is\cf2  \cf5 not\cf2  \cf5 None\cf2  \cf5 else\cf2  np.array([])\
+\
+          \cf4 #\cf2  \cf4 RMS\cf2  \cf4 energy\cf2  \cf4 contour\cf2 \
+          rms = librosa.feature.rms(y=segment, frame_length=\cf4 1024\cf2 ,\
+  hop_length=\cf4 256\cf2 )[\cf4 0\cf2 ]\
+\
+          \cf4 #\cf2  \cf4 Pause\cf2  \cf4 timing\cf2 \
+          pause_before = \cf4 0\cf2 \
+          \cf5 if\cf2  i > \cf4 0\cf2 :\
+              prev_end = _token_end_ms(spoken_tokens[i - \cf4 1\cf2 ])\
+              pause_before = \cf7 max\cf2 (\cf4 0\cf2 , start_ms - prev_end)\
+          pause_after = \cf4 0\cf2 \
+          \cf5 if\cf2  i < \cf7 len\cf2 (spoken_tokens) - \cf4 1\cf2 :\
+              next_start = _token_start_ms(spoken_tokens[i + \cf4 1\cf2 ])\
+              pause_after = \cf7 max\cf2 (\cf4 0\cf2 , next_start - end_ms)\
+\
+          prosody_map[\cf7 str\cf2 (i)] = \{\
+              \cf6 "duration_ms"\cf2 : duration_ms,\
+              \cf6 "speech_rate_wps"\cf2 : \cf7 round\cf2 (speech_rate, \cf4 2\cf2 ),\
+              \cf6 "f0_mean_hz"\cf2 : \cf7 round\cf2 (\cf7 float\cf2 (np.mean(f0_valid)), \cf4 1\cf2 ) \cf5 if\cf2  \cf7 len\cf2 (f0_valid)\
+  > \cf4 0\cf2  \cf5 else\cf2  \cf5 None\cf2 ,\
+              \cf6 "f0_std_hz"\cf2 : \cf7 round\cf2 (\cf7 float\cf2 (np.std(f0_valid)), \cf4 1\cf2 ) \cf5 if\cf2  \cf7 len\cf2 (f0_valid) >\
+  \cf4 1\cf2  \cf5 else\cf2  \cf5 None\cf2 ,\
+              \cf6 "f0_contour"\cf2 : [\cf7 round\cf2 (\cf7 float\cf2 (v), \cf4 1\cf2 ) \cf5 for\cf2  v \cf5 in\cf2  f0_valid[:\cf4 50\cf2 ]],  \cf4 #\cf2  \cf4 cap\cf2 \
+  \cf4 for\cf2  \cf4 storage\cf2 \
+              \cf6 "energy_contour"\cf2 : [\cf7 round\cf2 (\cf7 float\cf2 (v), \cf4 4\cf2 ) \cf5 for\cf2  v \cf5 in\cf2  rms[:\cf4 50\cf2 ]],\
+              \cf6 "pause_before_ms"\cf2 : pause_before,\
+              \cf6 "pause_after_ms"\cf2 : pause_after,\
+          \}\
+\
+      \cf5 return\cf2  prosody_map\
+\
+  ---\
+  
+\f2\b 7.
+\f1\b0  
+\f2\b Performance
+\f1\b0  
+\f2\b Variant
+\f1\b0  
+\f2\b Detection
+\f1\b0 \
+\
+  Added to \cf3 signal_fusion.py\cf2  \'97 compares prosody across alt-take cluster members:\
+\
+  PERFORMANCE_VARIANT_RATE_DIFF = \cf4 0.3\cf2     \cf4 #\cf2  \cf4 wps\cf2  \cf4 difference\cf2 \
+  PERFORMANCE_VARIANT_F0_DIFF_HZ = \cf4 20\cf2    \cf4 #\cf2  \cf4 mean\cf2  \cf4 pitch\cf2  \cf4 difference\cf2 \
+  PERFORMANCE_VARIANT_ENERGY_RATIO = \cf4 1.5\cf2  \cf4 #\cf2  \cf4 RMS\cf2  \cf4 ratio\cf2 \
+\
+  \cf5 def\cf9  detect_performance_variants(\cf2 \
+  \cf9  \cf2    \cf9 alt_clusters:\cf2  \cf7 list\cf9 [\cf7 dict\cf9 ],\cf2 \
+  \cf9  \cf2    \cf9 issue_records:\cf2  \cf7 list\cf9 [\cf7 dict\cf9 ],\cf2 \
+  \cf9  \cf2    \cf9 prosody_map:\cf2  \cf7 dict\cf9 ,\cf2 \
+  \cf9 )\cf2  \cf9 ->\cf2  \cf7 list\cf9 [\cf7 dict\cf9 ]:\cf2 \
+      \cf6 """\cf2 \
+  \cf6  \cf2    \cf6 For\cf2  \cf6 each\cf2  \cf6 alt-take\cf2  \cf6 cluster,\cf2  \cf6 compare\cf2  \cf6 prosody\cf2  \cf6 between\cf2  \cf6 takes.\cf2 \
+  \cf6  \cf2    \cf6 If\cf2  \cf6 takes\cf2  \cf6 differ\cf2  \cf6 meaningfully\cf2  \cf6 in\cf2  \cf6 pacing/pitch/energy,\cf2  \cf6 tag\cf2  \cf6 as\cf2 \
+  \cf6 performance_variant.\cf2 \
+  \cf6  \cf2    \cf6 """\cf2 \
+      new_issues = []\
+\
+      \cf5 for\cf2  cluster \cf5 in\cf2  alt_clusters:\
+          members = cluster[\cf6 "members"\cf2 ]\
+          \cf5 if\cf2  \cf7 len\cf2 (members) < \cf4 2\cf2 :\
+              \cf5 continue\cf2 \
+\
+          prosody_profiles = []\
+          \cf5 for\cf2  member \cf5 in\cf2  members:\
+              idx = member[\cf6 "issue_index"\cf2 ]\
+              issue = issue_records[idx]\
+              \cf4 #\cf2  \cf4 Aggregate\cf2  \cf4 prosody\cf2  \cf4 over\cf2  \cf4 tokens\cf2  \cf4 in\cf2  \cf4 this\cf2  \cf4 issue's\cf2  \cf4 time\cf2  \cf4 range\cf2 \
+              profile = _aggregate_prosody_for_range(\
+                  issue[\cf6 "start_ms"\cf2 ], issue[\cf6 "end_ms"\cf2 ], prosody_map\
+              )\
+              \cf5 if\cf2  profile:\
+                  prosody_profiles.append((member, profile))\
+\
+          \cf5 if\cf2  \cf7 len\cf2 (prosody_profiles) < \cf4 2\cf2 :\
+              \cf5 continue\cf2 \
+\
+          \cf4 #\cf2  \cf4 Compare\cf2  \cf4 each\cf2  \cf4 pair\cf2 \
+          \cf5 for\cf2  i \cf5 in\cf2  \cf7 range\cf2 (\cf7 len\cf2 (prosody_profiles)):\
+              \cf5 for\cf2  j \cf5 in\cf2  \cf7 range\cf2 (i + \cf4 1\cf2 , \cf7 len\cf2 (prosody_profiles)):\
+                  member_a, prof_a = prosody_profiles[i]\
+                  member_b, prof_b = prosody_profiles[j]\
+\
+                  rate_diff = \cf7 abs\cf2 (prof_a[\cf6 "speech_rate_wps"\cf2 ] -\
+  prof_b[\cf6 "speech_rate_wps"\cf2 ])\
+                  f0_diff = \cf7 abs\cf2 ((prof_a[\cf6 "f0_mean_hz"\cf2 ] \cf5 or\cf2  \cf4 0\cf2 ) -\
+  (prof_b[\cf6 "f0_mean_hz"\cf2 ] \cf5 or\cf2  \cf4 0\cf2 ))\
+                  energy_ratio = \cf7 max\cf2 (prof_a[\cf6 "rms"\cf2 ], prof_b[\cf6 "rms"\cf2 ]) /\
+  \cf7 max\cf2 (\cf7 min\cf2 (prof_a[\cf6 "rms"\cf2 ], prof_b[\cf6 "rms"\cf2 ]), \cf4 1e-6\cf2 )\
+\
+                  \cf5 if\cf2  (rate_diff > PERFORMANCE_VARIANT_RATE_DIFF\
+                      \cf5 or\cf2  f0_diff > PERFORMANCE_VARIANT_F0_DIFF_HZ\
+                      \cf5 or\cf2  energy_ratio > PERFORMANCE_VARIANT_ENERGY_RATIO):\
+\
+                      \cf4 #\cf2  \cf4 Tag\cf2  \cf4 the\cf2  \cf4 lower-quality\cf2  \cf4 take\cf2  \cf4 as\cf2  \cf4 performance_variant\cf2 \
+                      \cf4 #\cf2  \cf4 (heuristic:\cf2  \cf4 faster\cf2  \cf4 rate\cf2  \cf4 +\cf2  \cf4 lower\cf2  \cf4 energy\cf2  \cf4 =\cf2  \cf4 rushed)\cf2 \
+                      worse_idx = member_a[\cf6 "issue_index"\cf2 ] \cf5 if\cf2 \
+  prof_a[\cf6 "speech_rate_wps"\cf2 ] > prof_b[\cf6 "speech_rate_wps"\cf2 ] \cf5 else\cf2 \
+  member_b[\cf6 "issue_index"\cf2 ]\
+                      issue_records[worse_idx][\cf6 "type"\cf2 ] = \cf6 "performance_variant"\cf2 \
+                      issue_records[worse_idx][\cf6 "note"\cf2 ] = (\
+                          \cf6 f"Performance\cf2  \cf6 differs\cf2  \cf6 from\cf2  \cf6 alternate\cf2  \cf6 take.\cf2  \cf6 "\cf2 \
+                          \cf6 f"Rate\cf2  \cf6 diff:\cf2  \cf6 \{rate_diff:\cf4 .1\cf6 f\}\cf2  \cf6 wps,\cf2  \cf6 "\cf2 \
+                          \cf6 f"Pitch\cf2  \cf6 diff:\cf2  \cf6 \{f0_diff:\cf4 .0\cf6 f\}\cf2  \cf6 Hz,\cf2  \cf6 "\cf2 \
+                          \cf6 f"Energy\cf2  \cf6 ratio:\cf2  \cf6 \{energy_ratio:\cf4 .1\cf6 f\}x"\cf2 \
+                      )\
+\
+      \cf5 return\cf2  new_issues\
+\
+  ---\
+  
+\f2\b 8.
+\f1\b0  
+\f2\b Scoring
+\f1\b0  
+\f2\b System
+\f1\b0  
+\f2\b Upgrade
+\f1\b0  
+\f2\b (Structural)
+\f1\b0 \
+\
+  The scoring system preserves its current shape. The extension adds a\
+  structured separation:\
+\
+  \cf4 #\cf2  \cf4 detection_config.py\cf2  \cf4 \'97\cf2  \cf4 ADDITIONS\cf2 \
+\
+  \cf4 #\cf2  \cf4 ===\cf2  \cf4 LAYER\cf2  \cf4 1:\cf2  \cf4 Raw\cf2  \cf4 Feature\cf2  \cf4 Thresholds\cf2  \cf4 ===\cf2 \
+  \cf4 #\cf2  \cf4 (Used\cf2  \cf4 by\cf2  \cf4 audio_analysis.py\cf2  \cf4 \'97\cf2  \cf4 pure\cf2  \cf4 signal\cf2  \cf4 extraction,\cf2  \cf4 no\cf2  \cf4 editorial\cf2  \cf4 judgment)\cf2 \
+  CLICK_CREST_FACTOR_THRESHOLD = \cf4 12.0\cf2 \
+  CLICK_SPECTRAL_CENTROID_MIN_HZ = \cf4 2000\cf2 \
+  CLICK_ZCR_THRESHOLD = \cf4 0.3\cf2 \
+  CLICK_ONSET_STRENGTH_THRESHOLD = \cf4 3.0\cf2 \
+  ABRUPT_CUTOFF_RMS_DROP_FACTOR = \cf4 6.0\cf2 \
+\
+  \cf4 #\cf2  \cf4 ===\cf2  \cf4 LAYER\cf2  \cf4 2:\cf2  \cf4 Detector\cf2  \cf4 Output\cf2  \cf4 Confidence\cf2  \cf4 ===\cf2 \
+  \cf4 #\cf2  \cf4 (Confidence\cf2  \cf4 assigned\cf2  \cf4 to\cf2  \cf4 derived\cf2  \cf4 signal\cf2  \cf4 detections)\cf2 \
+  CLICK_MARKER_BASE_CONFIDENCE = \cf4 0.50\cf2 \
+  NON_SPEECH_MARKER_CONFIDENCE = \cf4 0.90\cf2       \cf4 #\cf2  \cf4 click\cf2  \cf4 confirmed\cf2  \cf4 near\cf2  \cf4 speech\cf2 \
+  \cf4 boundary\cf2 \
+  PICKUP_CANDIDATE_BASE_CONFIDENCE = \cf4 0.40\cf2 \
+  PICKUP_CANDIDATE_WITH_CLICK = \cf4 0.70\cf2 \
+  PICKUP_CANDIDATE_WITH_CUTOFF = \cf4 0.60\cf2 \
+  ALT_TAKE_BASE_CONFIDENCE = \cf4 0.75\cf2 \
+  PERFORMANCE_VARIANT_CONFIDENCE = \cf4 0.70\cf2 \
+\
+  \cf4 #\cf2  \cf4 ===\cf2  \cf4 LAYER\cf2  \cf4 3:\cf2  \cf4 Composite\cf2  \cf4 Scoring\cf2  \cf4 Hooks\cf2  \cf4 ===\cf2 \
+  \cf4 #\cf2  \cf4 (Extension\cf2  \cf4 points\cf2  \cf4 for\cf2  \cf4 future\cf2  \cf4 calibration\cf2  \cf4 layer)\cf2 \
+  \cf4 #\cf2  \cf4 These\cf2  \cf4 are\cf2  \cf4 NOT\cf2  \cf4 used\cf2  \cf4 yet\cf2  \cf4 \'97\cf2  \cf4 they\cf2  \cf4 define\cf2  \cf4 the\cf2  \cf4 interface\cf2  \cf4 for\cf2  \cf4 future\cf2  \cf4 scoring.\cf2 \
+  \cf4 #\cf2 \
+  \cf4 #\cf2  \cf4 A\cf2  \cf4 future\cf2  \cf4 composite\cf2  \cf4 scorer\cf2  \cf4 would:\cf2 \
+  \cf4 #\cf2    \cf4 composite_score\cf2  \cf4 =\cf2  \cf4 (\cf2 \
+  \cf4 #\cf2        \cf4 w_text\cf2  \cf4 *\cf2  \cf4 text_alignment_confidence\cf2 \
+  \cf4 #\cf2      \cf4 +\cf2  \cf4 w_audio\cf2  \cf4 *\cf2  \cf4 audio_signal_confidence\cf2 \
+  \cf4 #\cf2      \cf4 +\cf2  \cf4 w_prosody\cf2  \cf4 *\cf2  \cf4 prosody_deviation_score\cf2 \
+  \cf4 #\cf2      \cf4 +\cf2  \cf4 w_context\cf2  \cf4 *\cf2  \cf4 contextual_modifier\cf2 \
+  \cf4 #\cf2    \cf4 )\cf2 \
+  \cf4 #\cf2 \
+  \cf4 #\cf2  \cf4 Weight\cf2  \cf4 presets\cf2  \cf4 (for\cf2  \cf4 future\cf2  \cf4 use):\cf2 \
+  SCORING_WEIGHTS_DEFAULT = \{\
+      \cf6 "text_alignment"\cf2 : \cf4 0.50\cf2 ,\
+      \cf6 "audio_signal"\cf2 : \cf4 0.25\cf2 ,\
+      \cf6 "prosody"\cf2 : \cf4 0.15\cf2 ,\
+      \cf6 "context"\cf2 : \cf4 0.10\cf2 ,\
+  \}\
+\
+  \cf4 #\cf2  \cf4 Status\cf2  \cf4 thresholds\cf2  \cf4 unchanged\cf2  \cf4 \'97\cf2  \cf4 new\cf2  \cf4 types\cf2  \cf4 use\cf2  \cf4 the\cf2  \cf4 same\cf2  \cf4 logic:\cf2 \
+  \cf4 #\cf2  \cf4 confidence\cf2  \cf4 >=\cf2  \cf4 0.85\cf2  \cf4 \uc0\u8594 \cf2  \cf4 "approved"\cf2 \
+  \cf4 #\cf2  \cf4 else\cf2  \cf4 \uc0\u8594 \cf2  \cf4 "needs_manual"\cf2 \
+\
+  
+\f2\b Integration
+\f1\b0  
+\f2\b with
+\f1\b0  
+\f2\b existing
+\f1\b0  
+\f2\b \cf3 _default_issue_status
+\f1\b0 \cf2 : No changes. The function\
+  already works on confidence values. New issue types pass through the same\
+  threshold logic.\
+\
+  ---\
+  
+\f2\b 9.
+\f1\b0  
+\f2\b Signal
+\f1\b0  
+\f2\b Fusion
+\f1\b0  
+\f2\b \'97
+\f1\b0  
+\f2\b Integration
+\f1\b0  
+\f2\b Point
+\f1\b0  
+\f2\b (\cf3 services/signal_fusion.py\cf2 )
+\f1\b0 \
+\
+  \cf5 def\cf9  enrich_issues(\cf2 \
+  \cf9  \cf2    \cf9 issue_records:\cf2  \cf7 list\cf9 [\cf7 dict\cf9 ],\cf2 \
+  \cf9  \cf2    \cf9 audio_signals:\cf2  \cf7 list\cf9 [\cf7 dict\cf9 ],\cf2 \
+  \cf9  \cf2    \cf9 vad_segments:\cf2  \cf7 list\cf9 [\cf7 dict\cf9 ],\cf2 \
+  \cf9  \cf2    \cf9 prosody_map:\cf2  \cf7 dict\cf9 ,\cf2 \
+  \cf9  \cf2    \cf9 spoken_tokens:\cf2  \cf7 list\cf9 ,\cf2 \
+  \cf9  \cf2    \cf9 manuscript_tokens:\cf2  \cf7 list\cf9 ,\cf2 \
+  \cf9  \cf2    \cf9 alignment:\cf2  \cf7 dict\cf9 ,\cf2 \
+  \cf9 )\cf2  \cf9 ->\cf2  \cf7 list\cf9 [\cf7 dict\cf9 ]:\cf2 \
+      \cf6 """\cf2 \
+  \cf6  \cf2    \cf6 Main\cf2  \cf6 fusion\cf2  \cf6 function.\cf2  \cf6 Called\cf2  \cf6 from\cf2  \cf6 build_issue_records\cf2  \cf6 after\cf2  \cf6 existing\cf2 \
+  \cf6 detection.\cf2 \
+  \cf6  \cf2    \cf6 Enriches\cf2  \cf6 existing\cf2  \cf6 issues\cf2  \cf6 with\cf2  \cf6 audio/prosody\cf2  \cf6 features\cf2  \cf6 and\cf2  \cf6 adds\cf2  \cf6 new\cf2 \
+  \cf6 signal-based\cf2  \cf6 issues.\cf2 \
+  \cf6  \cf2    \cf6 """\cf2 \
+      \cf4 #\cf2  \cf4 1.\cf2  \cf4 Attach\cf2  \cf4 audio\cf2  \cf4 features\cf2  \cf4 to\cf2  \cf4 existing\cf2  \cf4 issues\cf2 \
+      \cf5 for\cf2  issue \cf5 in\cf2  issue_records:\
+          issue[\cf6 "audio_features"\cf2 ] = _extract_audio_features_for_range(\
+              issue[\cf6 "start_ms"\cf2 ], issue[\cf6 "end_ms"\cf2 ], audio_signals\
+          )\
+          issue[\cf6 "audio_signals"\cf2 ] = _derive_audio_signals_for_range(\
+              issue[\cf6 "start_ms"\cf2 ], issue[\cf6 "end_ms"\cf2 ], audio_signals\
+          )\
+          issue[\cf6 "prosody_features"\cf2 ] = _aggregate_prosody_for_range(\
+              issue[\cf6 "start_ms"\cf2 ], issue[\cf6 "end_ms"\cf2 ], prosody_map\
+          )\
+\
+      \cf4 #\cf2  \cf4 2.\cf2  \cf4 Generate\cf2  \cf4 non_speech_marker\cf2  \cf4 issues\cf2  \cf4 from\cf2  \cf4 orphan\cf2  \cf4 click\cf2  \cf4 markers\cf2 \
+      \cf4 #\cf2     \cf4 (clicks\cf2  \cf4 not\cf2  \cf4 near\cf2  \cf4 any\cf2  \cf4 existing\cf2  \cf4 issue)\cf2 \
+      \cf5 for\cf2  signal \cf5 in\cf2  audio_signals:\
+          \cf5 if\cf2  signal[\cf6 "signal_type"\cf2 ] != \cf6 "click_marker"\cf2 :\
+              \cf5 continue\cf2 \
+          near_existing = \cf7 any\cf2 (\
+              \cf7 abs\cf2 (signal[\cf6 "start_ms"\cf2 ] - issue[\cf6 "start_ms"\cf2 ]) < \cf4 2000\cf2 \
+              \cf5 for\cf2  issue \cf5 in\cf2  issue_records\
+          )\
+          \cf5 if\cf2  \cf5 not\cf2  near_existing:\
+              issue_records.append(\{\
+                  \cf6 "type"\cf2 : \cf6 "non_speech_marker"\cf2 ,\
+                  \cf6 "start_ms"\cf2 : signal[\cf6 "start_ms"\cf2 ],\
+                  \cf6 "end_ms"\cf2 : signal[\cf6 "end_ms"\cf2 ],\
+                  \cf6 "confidence"\cf2 : NON_SPEECH_MARKER_CONFIDENCE,\
+                  \cf6 "expected_text"\cf2 : \cf6 ""\cf2 ,\
+                  \cf6 "spoken_text"\cf2 : \cf6 ""\cf2 ,\
+                  \cf6 "context_before"\cf2 : \cf6 ""\cf2 ,\
+                  \cf6 "context_after"\cf2 : \cf6 ""\cf2 ,\
+                  \cf6 "note"\cf2 : \cf6 f"Isolated\cf2  \cf6 click\cf2  \cf6 marker\cf2  \cf6 (crest:\cf2 \
+  \cf6 \{signal.get('crest_factor_db',\cf2  \cf6 '?')\}dB)"\cf2 ,\
+                  \cf6 "audio_features"\cf2 : signal,\
+                  \cf6 "audio_signals"\cf2 : \{\cf6 "has_click_marker"\cf2 : \cf5 True\cf2 ,\
+  \cf6 "click_marker_confidence"\cf2 : signal[\cf6 "confidence"\cf2 ]\},\
+              \})\
+\
+      \cf4 #\cf2  \cf4 3.\cf2  \cf4 Generate\cf2  \cf4 pickup_candidate\cf2  \cf4 issues\cf2  \cf4 from\cf2  \cf4 VAD\cf2  \cf4 +\cf2  \cf4 audio\cf2  \cf4 signals\cf2 \
+      pickup_candidates = detect_pickup_candidates(\
+          spoken_tokens, vad_segments, audio_signals, issue_records\
+      )\
+      issue_records.extend(pickup_candidates)\
+\
+      \cf5 return\cf2  issue_records\
+\
+  ---\
+  
+\f2\b 10.
+\f1\b0  
+\f2\b Export
+\f1\b0  
+\f2\b Compatibility
+\f1\b0 \
+\
+  \cf4 #\cf2  \cf4 services/export.py\cf2  \cf4 \'97\cf2  \cf4 ADDITIONS\cf2  \cf4 ONLY\cf2 \
+\
+  CUTTABLE_ISSUE_TYPES = \{\
+      \cf6 "false_start"\cf2 ,\
+      \cf6 "repetition"\cf2 ,\
+      \cf6 "pickup_restart"\cf2 ,\
+      \cf6 "substitution"\cf2 ,\
+      \cf6 "long_pause"\cf2 ,\
+      \cf4 #\cf2  \cf4 NEW:\cf2 \
+      \cf6 "alt_take"\cf2 ,           \cf4 #\cf2  \cf4 non-preferred\cf2  \cf4 takes\cf2  \cf4 get\cf2  \cf4 cut\cf2 \
+      \cf6 "non_speech_marker"\cf2 ,  \cf4 #\cf2  \cf4 click\cf2  \cf4 markers\cf2  \cf4 get\cf2  \cf4 cut\cf2 \
+      \cf6 "pickup_candidate"\cf2 ,   \cf4 #\cf2  \cf4 confirmed\cf2  \cf4 pickups\cf2  \cf4 get\cf2  \cf4 cut\cf2 \
+  \}\
+\
+  \cf4 #\cf2  \cf4 CSV\cf2  \cf4 export:\cf2  \cf4 no\cf2  \cf4 structural\cf2  \cf4 changes\cf2  \cf4 needed.\cf2 \
+  \cf4 #\cf2  \cf4 New\cf2  \cf4 issue\cf2  \cf4 types\cf2  \cf4 flow\cf2  \cf4 through\cf2  \cf4 existing\cf2  \cf4 column\cf2  \cf4 schema:\cf2 \
+  \cf4 #\cf2    \cf4 issue_id\cf2  \cf4 |\cf2  \cf4 type\cf2  \cf4 |\cf2  \cf4 start_timecode\cf2  \cf4 |\cf2  \cf4 end_timecode\cf2  \cf4 |\cf2  \cf4 confidence\cf2  \cf4 |\cf2 \
+  \cf4 expected_text\cf2  \cf4 |\cf2  \cf4 spoken_text\cf2  \cf4 |\cf2  \cf4 status\cf2  \cf4 |\cf2  \cf4 note\cf2 \
+  \cf4 #\cf2  \cf4 The\cf2  \cf4 "type"\cf2  \cf4 column\cf2  \cf4 now\cf2  \cf4 includes\cf2  \cf4 new\cf2  \cf4 values.\cf2  \cf4 Adobe\cf2  \cf4 Audition\cf2  \cf4 markers\cf2  \cf4 work\cf2 \
+  \cf4 unchanged.\cf2 \
+\
+  ---\
+  
+\f2\b 11.
+\f1\b0  
+\f2\b UI
+\f1\b0  
+\f2\b Additions
+\f1\b0  
+\f2\b (Not
+\f1\b0  
+\f2\b Rewrite)
+\f1\b0 \
+\
+  
+\f2\b 11a.
+\f1\b0  
+\f2\b New
+\f1\b0  
+\f2\b Component:
+\f1\b0  
+\f2\b \cf3 AltTakesPanel.tsx
+\f1\b0 \cf2 \
+\
+  Sits alongside existing panels in \cf3 ChapterReviewPage\cf2 . Shows when alt-take\
+  clusters exist.\
+\
+  \uc0\u9484 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9488 \
+  \uc0\u9474  Alternate Takes                    [2]  \u9474 \
+  \uc0\u9500 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9508 \
+  \uc0\u9474  \u9660  "Once upon a time, in a land far..."  \u9474 \
+  \uc0\u9474    \u9484 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9488   \u9474 \
+  \uc0\u9474    \u9474  \u9733  Take 1  00:02:15 \'97 00:02:18   \u9474   \u9474  \u8592  preferred (green border)\
+  \uc0\u9474    \u9474    Rate: 3.2 wps  Pitch: 142 Hz  \u9474   \u9474 \
+  \uc0\u9474    \u9474    [Play] [Select as preferred]   \u9474   \u9474 \
+  \uc0\u9474    \u9500 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9508   \u9474 \
+  \uc0\u9474    \u9474    Take 2  00:02:19 \'97 00:02:22   \u9474   \u9474  \u8592  marked for cut (red border)\
+  \uc0\u9474    \u9474    Rate: 4.1 wps  Pitch: 155 Hz  \u9474   \u9474 \
+  \uc0\u9474    \u9474    [Play] [Select as preferred]   \u9474   \u9474 \
+  \uc0\u9474    \u9492 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9496   \u9474 \
+  \uc0\u9474                                          \u9474 \
+  \uc0\u9474  \u9654  "She walked through the garden..."    \u9474 \
+  \uc0\u9474    2 takes                               \u9474 \
+  \uc0\u9492 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9496 \
+\
+  
+\f2\b Behavior
+\f1\b0 :\
+  - Selecting preferred take \uc0\u8594  marks others as "approved" (for cut)\
+  - Preferred take gets status "rejected" (keep in output)\
+  - Uses existing \cf3 PATCH\cf2  \cf3 /issues/\{id\}\cf2  endpoint \'97 no new API needed\
+\
+  
+\f2\b 11b.
+\f1\b0  
+\f2\b Signal
+\f1\b0  
+\f2\b Indicators
+\f1\b0  
+\f2\b on
+\f1\b0  
+\f2\b Existing
+\f1\b0  
+\f2\b Components
+\f1\b0 \
+\
+  
+\f2\b IssueTimeline
+\f1\b0  \'97 add overlay markers:\
+  \cf4 //\cf2  \cf4 In\cf2  \cf4 IssueTimeline.tsx,\cf2  \cf4 add\cf2  \cf4 a\cf2  \cf4 new\cf2  \cf4 marker\cf2  \cf4 layer:\cf2 \
+  \{audioSignals\
+    .filter(\cf9 s\cf2  \cf9 =>\cf2  s.signal_type === \cf6 'click_marker'\cf2 )\
+    .map(\cf9 signal\cf2  \cf9 =>\cf2  (\
+      \cf10 <\cf5 div\cf2 \
+  \cf10  \cf2      \cf7 key\cf10 =\cf6 \{signal.id\}\cf2 \
+  \cf10  \cf2      \cf7 className\cf10 =\cf6 "signal-marker\cf2  \cf6 signal-click"\cf2 \
+  \cf10  \cf2      \cf7 style\cf10 =\cf6 \{\{\cf10  \cf7 left:\cf10  `$\{(\cf7 signal.start_ms\cf10  /\cf2  \cf7 durationMs\cf10 )\cf2  \cf10 *\cf2  \cf7 100\cf10 \}%`\cf2  \cf10 \}\}\cf2 \
+  \cf10  \cf2      \cf7 title\cf10 =\cf6 \{\cf10 `\cf7 Click\cf10  \cf7 marker\cf10  ($\{(\cf7 signal.confidence\cf10  *\cf2  \cf7 100\cf10 )\cf7 .toFixed\cf10 (\cf7 0\cf10 )\}%)`\}\cf2 \
+  \cf10  \cf2    \cf10 />\cf2 \
+    ))\}\
+\
+  
+\f2\b IssueList
+\f1\b0  \'97 add icons for new types in \cf3 utils.ts\cf2 :\
+  \cf4 //\cf2  \cf4 utils.ts\cf2  \cf4 \'97\cf2  \cf4 additions\cf2  \cf4 to\cf2  \cf4 ISSUE_TYPE_META\cf2 \
+  \cf7 pickup_candidate\cf2 : \{ \cf7 label\cf2 : \cf6 "Pickup\cf2  \cf6 Candidate"\cf2 , \cf7 color\cf2 : \cf6 "#5B8DEF"\cf2 , \cf7 icon\cf2 : \cf6 "\uc0\u8617 "\cf2  \},\
+  \cf7 alt_take\cf2 :         \{ \cf7 label\cf2 : \cf6 "Alternate\cf2  \cf6 Take"\cf2 ,   \cf7 color\cf2 : \cf6 "#9B59B6"\cf2 , \cf7 icon\cf2 : \cf6 "\uc0\u8644 "\cf2  \},\
+  \cf7 performance_variant\cf2 : \{ \cf7 label\cf2 : \cf6 "Performance\cf2  \cf6 Variant"\cf2 , \cf7 color\cf2 : \cf6 "#E67E22"\cf2 , \cf7 icon\cf2 :\
+  \cf6 "\uc0\u9834 "\cf2  \},\
+  \cf7 non_speech_marker\cf2 :   \{ \cf7 label\cf2 : \cf6 "Non-Speech\cf2  \cf6 Marker"\cf2 ,   \cf7 color\cf2 : \cf6 "#95A5A6"\cf2 , \cf7 icon\cf2 :\
+  \cf6 "\uc0\u9679 "\cf2  \},\
+\
+  
+\f2\b IssueDetail
+\f1\b0  \'97 show audio/prosody features when present:\
+  \cf4 //\cf2  \cf4 In\cf2  \cf4 IssueDetail.tsx,\cf2  \cf4 add\cf2  \cf4 collapsible\cf2  \cf4 section:\cf2 \
+  \{issue.audio_signals?.has_click_marker && (\
+    \cf10 <\cf5 div\cf10  \cf7 className\cf10 =\cf6 "signal-badge"\cf10 >\cf2 \uc0\u55357 \u56600  Click marker detected\cf10 </\cf5 div\cf10 >\cf2 \
+  )\}\
+  \{issue.prosody_features && (\
+    \cf10 <\cf5 CollapsibleSection\cf10  \cf7 title\cf10 =\cf6 "Prosody"\cf10 >\cf2 \
+      \cf10 <\cf5 span\cf10 >\cf2 Rate: \{issue.prosody_features.speech_rate_wps\} wps\cf10 </\cf5 span\cf10 >\cf2 \
+      \cf10 <\cf5 span\cf10 >\cf2 Pitch: \{issue.prosody_features.f0_mean_hz ?? '\'97'\} Hz\cf10 </\cf5 span\cf10 >\cf2 \
+    \cf10 </\cf5 CollapsibleSection\cf10 >\cf2 \
+  )\}\
+\
+  
+\f2\b 11c.
+\f1\b0  
+\f2\b New
+\f1\b0  
+\f2\b API
+\f1\b0  
+\f2\b Endpoints
+\f1\b0 \
+\
+  \cf4 #\cf2  \cf4 apps/api/app/api/\cf2  \cf4 \'97\cf2  \cf4 new\cf2  \cf4 endpoints\cf2 \
+\
+  \cf4 #\cf2  \cf4 GET\cf2  \cf4 /chapters/\{id\}/audio-signals\cf2 \
+  \cf4 #\cf2    \cf4 Returns:\cf2  \cf4 list[AudioSignalRecord]\cf2 \
+\
+  \cf4 #\cf2  \cf4 GET\cf2  \cf4 /chapters/\{id\}/vad-segments\cf2 \
+  \cf4 #\cf2    \cf4 Returns:\cf2  \cf4 list[VadSegment]\cf2 \
+\
+  \cf4 #\cf2  \cf4 GET\cf2  \cf4 /chapters/\{id\}/alt-take-clusters\cf2 \
+  \cf4 #\cf2    \cf4 Returns:\cf2  \cf4 list[AltTakeCluster]\cf2  \cf4 (with\cf2  \cf4 members\cf2  \cf4 populated)\cf2 \
+\
+  \cf4 #\cf2  \cf4 PATCH\cf2  \cf4 /alt-take-clusters/\{id\}/preferred\cf2 \
+  \cf4 #\cf2    \cf4 Body:\cf2  \cf4 \{\cf2  \cf4 preferred_issue_id:\cf2  \cf4 int\cf2  \cf4 \}\cf2 \
+  \cf4 #\cf2    \cf4 Effect:\cf2  \cf4 sets\cf2  \cf4 preferred\cf2  \cf4 take,\cf2  \cf4 marks\cf2  \cf4 others\cf2  \cf4 as\cf2  \cf4 "approved"\cf2  \cf4 for\cf2  \cf4 cut\cf2 \
+\
+  ---\
+  
+\f2\b 12.
+\f1\b0  
+\f2\b Performance
+\f1\b0  
+\f2\b Considerations
+\f1\b0  
+\f2\b (GPU/CPU
+\f1\b0  
+\f2\b Split)
+\f1\b0 \
+\
+  \uc0\u9484 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9516 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9516 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9516 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \
+  \uc0\u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9488 \
+  \uc0\u9474          Operation         \u9474   Compute  \u9474  Time Estimate (30min  \u9474 \
+  Notes           \uc0\u9474 \
+  \uc0\u9474                            \u9474            \u9474         audio)         \u9474 \
+               \uc0\u9474 \
+  \uc0\u9500 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9532 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9532 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9532 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \
+  \uc0\u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9508 \
+  \uc0\u9474  Whisper transcription     \u9474  
+\f2\b GPU
+\f1\b0        \uc0\u9474  3-8 min               \u9474  Already\
+  exists,          \uc0\u9474 \
+  \uc0\u9474                            \u9474            \u9474                        \u9474  unchanged\
+               \uc0\u9474 \
+  \uc0\u9500 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9532 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9532 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9532 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \
+  \uc0\u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9508 \
+  \uc0\u9474  Silero VAD                \u9474  
+\f2\b GPU
+\f1\b0        \uc0\u9474  5-10 sec              \u9474  Tiny model,\
+  runs on same \uc0\u9474 \
+  \uc0\u9474                            \u9474  (light)   \u9474                        \u9474   GPU\
+               \uc0\u9474 \
+  \uc0\u9500 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9532 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9532 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9532 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \
+  \uc0\u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9508 \
+  \uc0\u9474  Audio signal analysis     \u9474  
+\f2\b CPU
+\f1\b0        \uc0\u9474  15-30 sec             \u9474  NumPy/FFT \'97\
+  CPU optimal  \uc0\u9474 \
+  \uc0\u9474  (librosa)                 \u9474            \u9474                        \u9474 \
+               \uc0\u9474 \
+  \uc0\u9500 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9532 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9532 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9532 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \
+  \uc0\u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9508 \
+  \uc0\u9474  Prosody extraction (pyin) \u9474  
+\f2\b CPU
+\f1\b0        \uc0\u9474  30-60 sec             \u9474  Per-token F0\
+   is the      \uc0\u9474 \
+  \uc0\u9474                            \u9474            \u9474                        \u9474  bottleneck\
+               \uc0\u9474 \
+  \uc0\u9500 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9532 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9532 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9532 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \
+  \uc0\u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9508 \
+  \uc0\u9474  Alt-take clustering       \u9474  
+\f2\b CPU
+\f1\b0        \uc0\u9474  <1 sec                \u9474  Pure logic,\
+  no audio I/O \uc0\u9474 \
+  \uc0\u9500 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9532 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9532 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9532 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \
+  \uc0\u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9508 \
+  \uc0\u9474  Signal fusion             \u9474  
+\f2\b CPU
+\f1\b0        \uc0\u9474  <1 sec                \u9474  Dict\
+  operations          \uc0\u9474 \
+  \uc0\u9492 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9524 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9524 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9524 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \
+  \uc0\u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9496 \
+\
+  
+\f2\b Total
+\f1\b0  
+\f2\b added
+\f1\b0  
+\f2\b time
+\f1\b0 : ~1-2 minutes on top of existing pipeline (dominated by\
+  prosody/pyin).\
+\
+  
+\f2\b Optimization
+\f1\b0  
+\f2\b levers
+\f1\b0 :\
+  - Prosody: only compute for tokens in issue regions (not entire audio)\
+  - VAD: can share GPU with Whisper if run sequentially\
+  - Audio analysis: parallelize with \cf3 concurrent.futures.ThreadPoolExecutor\cf2 \
+\
+  ---\
+  
+\f2\b 13.
+\f1\b0  
+\f2\b Extension
+\f1\b0  
+\f2\b Points
+\f1\b0  
+\f2\b for
+\f1\b0  
+\f2\b Future
+\f1\b0  
+\f2\b Scoring/Calibration
+\f1\b0  
+\f2\b Layer
+\f1\b0 \
+\
+  The design separates three layers that a future calibration system can consume\
+   independently:\
+\
+  \uc0\u9484 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9488 \
+  \uc0\u9474  LAYER 1: Raw Features                               \u9474 \
+  \uc0\u9474   issue.audio_features  \u8594  AudioFeatures dict          \u9474 \
+  \uc0\u9474   issue.prosody_features \u8594  ProsodyFeatures dict       \u9474 \
+  \uc0\u9474   audio_signals.json    \u8594  per-chapter signal list     \u9474 \
+  \uc0\u9474   vad_segments.json     \u8594  per-chapter VAD list        \u9474 \
+  \uc0\u9474   prosody_features.json \u8594  per-token prosody           \u9474 \
+  \uc0\u9474                                                       \u9474 \
+  \uc0\u9474  All preserved as JSON artifacts in analysis/ dir     \u9474 \
+  \uc0\u9474  Never modified by downstream steps                   \u9474 \
+  \uc0\u9500 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9508 \
+  \uc0\u9474  LAYER 2: Detector Outputs                            \u9474 \
+  \uc0\u9474   issue.audio_signals   \u8594  AudioSignals flags          \u9474 \
+  \uc0\u9474   issue.type            \u8594  classification              \u9474 \
+  \uc0\u9474   issue.confidence      \u8594  per-detector confidence     \u9474 \
+  \uc0\u9474   alt_take_clusters     \u8594  grouping decisions          \u9474 \
+  \uc0\u9474                                                       \u9474 \
+  \uc0\u9474  Derived from Layer 1 using deterministic rules       \u9474 \
+  \uc0\u9474  Modular: each detector can be enabled/disabled       \u9474 \
+  \uc0\u9500 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9508 \
+  \uc0\u9474  LAYER 3: Composite Score (FUTURE)                    \u9474 \
+  \uc0\u9474   SCORING_WEIGHTS_DEFAULT defined but not used yet    \u9474 \
+  \uc0\u9474   All raw data available for simulation/calibration   \u9474 \
+  \uc0\u9474   Alt-take comparison ready for A/B scoring           \u9474 \
+  \uc0\u9474   Prosody contours ready for similarity metrics       \u9474 \
+  \uc0\u9492 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9496 \
+\
+  A future calibration system can:\
+  1. Load raw features from JSON artifacts\
+  2. Run alternate scoring formulas without re-processing audio\
+  3. Compare alt-take prosody profiles to auto-select preferred takes\
+  4. Simulate threshold changes on historical data\
+  5. A/B test detector configurations by replaying feature data\
+\
+  ---\
+  
+\f2\b 14.
+\f1\b0  
+\f2\b Alembic
+\f1\b0  
+\f2\b Migration
+\f1\b0 \
+\
+  \cf4 #\cf2  \cf4 alembic/versions/xxx_add_signal_tables.py\cf2 \
+\
+  \cf5 def\cf9  upgrade():\cf2 \
+      \cf4 #\cf2  \cf4 New\cf2  \cf4 tables\cf2 \
+      op.create_table(\cf6 'audiosignal'\cf2 ,\
+          sa.Column(\cf6 'id'\cf2 , sa.Integer, primary_key=\cf5 True\cf2 ),\
+          sa.Column(\cf6 'chapter_id'\cf2 , sa.Integer, sa.ForeignKey(\cf6 'chapter.id'\cf2 ),\
+  index=\cf5 True\cf2 ),\
+          sa.Column(\cf6 'signal_type'\cf2 , sa.String, nullable=\cf5 False\cf2 ),\
+          sa.Column(\cf6 'start_ms'\cf2 , sa.Integer, nullable=\cf5 False\cf2 ),\
+          sa.Column(\cf6 'end_ms'\cf2 , sa.Integer, nullable=\cf5 False\cf2 ),\
+          sa.Column(\cf6 'confidence'\cf2 , sa.Float, nullable=\cf5 False\cf2 ),\
+          sa.Column(\cf6 'rms_db'\cf2 , sa.Float),\
+          sa.Column(\cf6 'spectral_centroid_hz'\cf2 , sa.Float),\
+          sa.Column(\cf6 'zero_crossing_rate'\cf2 , sa.Float),\
+          sa.Column(\cf6 'onset_strength'\cf2 , sa.Float),\
+          sa.Column(\cf6 'bandwidth_hz'\cf2 , sa.Float),\
+          sa.Column(\cf6 'note'\cf2 , sa.String),\
+          sa.Column(\cf6 'created_at'\cf2 , sa.DateTime, nullable=\cf5 False\cf2 ),\
+      )\
+      op.create_table(\cf6 'vadsegment'\cf2 ,\
+          sa.Column(\cf6 'id'\cf2 , sa.Integer, primary_key=\cf5 True\cf2 ),\
+          sa.Column(\cf6 'chapter_id'\cf2 , sa.Integer, sa.ForeignKey(\cf6 'chapter.id'\cf2 ),\
+  index=\cf5 True\cf2 ),\
+          sa.Column(\cf6 'start_ms'\cf2 , sa.Integer, nullable=\cf5 False\cf2 ),\
+          sa.Column(\cf6 'end_ms'\cf2 , sa.Integer, nullable=\cf5 False\cf2 ),\
+          sa.Column(\cf6 'speech_probability'\cf2 , sa.Float, nullable=\cf5 False\cf2 ),\
+          sa.Column(\cf6 'created_at'\cf2 , sa.DateTime, nullable=\cf5 False\cf2 ),\
+      )\
+      op.create_table(\cf6 'alttakecluster'\cf2 ,\
+          sa.Column(\cf6 'id'\cf2 , sa.Integer, primary_key=\cf5 True\cf2 ),\
+          sa.Column(\cf6 'chapter_id'\cf2 , sa.Integer, sa.ForeignKey(\cf6 'chapter.id'\cf2 ),\
+  index=\cf5 True\cf2 ),\
+          sa.Column(\cf6 'manuscript_start_idx'\cf2 , sa.Integer, nullable=\cf5 False\cf2 ),\
+          sa.Column(\cf6 'manuscript_end_idx'\cf2 , sa.Integer, nullable=\cf5 False\cf2 ),\
+          sa.Column(\cf6 'manuscript_text'\cf2 , sa.String, nullable=\cf5 False\cf2 ),\
+          sa.Column(\cf6 'preferred_issue_id'\cf2 , sa.Integer,\
+  sa.ForeignKey(\cf6 'issue.id'\cf2 )),\
+          sa.Column(\cf6 'confidence'\cf2 , sa.Float, nullable=\cf5 False\cf2 ),\
+          sa.Column(\cf6 'created_at'\cf2 , sa.DateTime, nullable=\cf5 False\cf2 ),\
+      )\
+      op.create_table(\cf6 'alttakemember'\cf2 ,\
+          sa.Column(\cf6 'id'\cf2 , sa.Integer, primary_key=\cf5 True\cf2 ),\
+          sa.Column(\cf6 'cluster_id'\cf2 , sa.Integer,\
+  sa.ForeignKey(\cf6 'alttakecluster.id'\cf2 ), index=\cf5 True\cf2 ),\
+          sa.Column(\cf6 'issue_id'\cf2 , sa.Integer, sa.ForeignKey(\cf6 'issue.id'\cf2 ),\
+  index=\cf5 True\cf2 ),\
+          sa.Column(\cf6 'take_order'\cf2 , sa.Integer, nullable=\cf5 False\cf2 ),\
+      )\
+      \cf4 #\cf2  \cf4 Extend\cf2  \cf4 Issue\cf2  \cf4 table\cf2 \
+      op.add_column(\cf6 'issue'\cf2 , sa.Column(\cf6 'audio_features_json'\cf2 , sa.String))\
+      op.add_column(\cf6 'issue'\cf2 , sa.Column(\cf6 'audio_signals_json'\cf2 , sa.String))\
+      op.add_column(\cf6 'issue'\cf2 , sa.Column(\cf6 'prosody_features_json'\cf2 , sa.String))\
+      op.add_column(\cf6 'issue'\cf2 , sa.Column(\cf6 'alt_take_cluster_id'\cf2 , sa.Integer,\
+  sa.ForeignKey(\cf6 'alttakecluster.id'\cf2 )))\
+\
+  ---\
+  
+\f2\b 15.
+\f1\b0  
+\f2\b Dependency
+\f1\b0  
+\f2\b Additions
+\f1\b0 \
+\
+  # requirements.txt additions\
+  librosa>=0.10.0          # audio feature extraction, pyin F0\
+  silero-vad>=5.0          # or via torch.hub (no pip package needed)\
+  # torchaudio already present (used by whisperx)\
+  # numpy already present\
+\
+  No new frontend dependencies required \'97 new UI components use existing React +\
+   wavesurfer.js.\
+\
+  ---\
+  
+\f2\b Summary
+\f1\b0  
+\f2\b of
+\f1\b0  
+\f2\b What
+\f1\b0  
+\f2\b Changes
+\f1\b0  
+\f2\b vs.
+\f1\b0  
+\f2\b What
+\f1\b0  
+\f2\b Stays
+\f1\b0 \
+\
+  \uc0\u9484 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9516 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \
+  \uc0\u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9488 \
+  \uc0\u9474          Component          \u9474                             Status\
+                 \uc0\u9474 \
+  \uc0\u9500 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9532 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \
+  \uc0\u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9508 \
+  \uc0\u9474  Whisper transcription      \u9474  
+\f2\b Unchanged
+\f1\b0 \
+                 \uc0\u9474 \
+  \uc0\u9500 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9532 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \
+  \uc0\u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9508 \
+  \uc0\u9474  Token alignment (difflib)  \u9474  
+\f2\b Unchanged
+\f1\b0 \
+                 \uc0\u9474 \
+  \uc0\u9500 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9532 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \
+  \uc0\u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9508 \
+  \uc0\u9474  Existing 7 issue types     \u9474  
+\f2\b Unchanged
+\f1\b0  (still detected, same confidence)\
+                 \uc0\u9474 \
+  \uc0\u9500 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9532 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \
+  \uc0\u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9508 \
+  \uc0\u9474  Existing scoring           \u9474  
+\f2\b Unchanged
+\f1\b0 \
+                 \uc0\u9474 \
+  \uc0\u9474  thresholds                 \u9474 \
+                 \uc0\u9474 \
+  \uc0\u9500 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9532 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \
+  \uc0\u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9508 \
+  \uc0\u9474  LLM triage                 \u9474  
+\f2\b Unchanged
+\f1\b0  (new types pass through same system)\
+                 \uc0\u9474 \
+  \uc0\u9500 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9532 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \
+  \uc0\u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9508 \
+  \uc0\u9474  CSV export format          \u9474  
+\f2\b Unchanged
+\f1\b0  (new types just appear as new \cf3 type\cf2 \
+  values)          \uc0\u9474 \
+  \uc0\u9500 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9532 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \
+  \uc0\u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9508 \
+  \uc0\u9474  Auto-edit export           \u9474  
+\f2\b Extended
+\f1\b0  (new cuttable types added to set)\
+                 \uc0\u9474 \
+  \uc0\u9500 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9532 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \
+  \uc0\u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9508 \
+  \uc0\u9474  Issue model                \u9474  
+\f2\b Extended
+\f1\b0  (3 nullable JSON columns + 1 FK)\
+                 \uc0\u9474 \
+  \uc0\u9500 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9532 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \
+  \uc0\u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9508 \
+  \uc0\u9474  Pipeline                   \u9474  
+\f2\b Extended
+\f1\b0  (4 new steps inserted between align\
+  and detect)      \uc0\u9474 \
+  \uc0\u9500 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9532 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \
+  \uc0\u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9508 \
+  \uc0\u9474  Detection                  \u9474  
+\f2\b Extended
+\f1\b0  (accepts optional signal data, adds 4\
+  new issue      \uc0\u9474 \
+  \uc0\u9474                             \u9474  types)\
+                 \uc0\u9474 \
+  \uc0\u9500 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9532 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \
+  \uc0\u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9508 \
+  \uc0\u9474  UI                         \u9474  
+\f2\b Extended
+\f1\b0  (new panel + indicators, no rewrites)\
+                 \uc0\u9474 \
+  \uc0\u9492 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9524 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \
+  \uc0\u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9496 \
+\
+}

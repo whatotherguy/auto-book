@@ -191,7 +191,7 @@ export type AnalysisJob = {
   error_message?: string | null
 }
 
-export type TranscriptionMode = "optimized" | "high_quality" | "max_quality"
+export type TranscriptionMode = "optimized" | "high_quality" | "max_quality" | "whisper_api"
 
 export type GpuInfo = {
   available: boolean

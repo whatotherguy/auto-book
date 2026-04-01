@@ -607,6 +607,9 @@ export function ChapterReviewPage({
               <option value="optimized">Optimized{gpuInfo?.available ? " (GPU)" : ""}</option>
               <option value="high_quality">High Quality{gpuInfo?.available ? " (GPU)" : " (slow)"}</option>
               <option value="max_quality">Max Quality{gpuInfo?.available ? " (GPU)" : " (very slow)"}</option>
+              {appSettings?.has_openai_key && (
+                <option value="whisper_api">Whisper API (cloud)</option>
+              )}
             </select>
             {gpuInfo ? (
               <span className="muted" style={{ fontSize: "0.72rem" }}>

@@ -22,9 +22,9 @@ class AnalyzeChapterRequest(BaseModel):
 
     @model_validator(mode="after")
     def validate_mode(self) -> "AnalyzeChapterRequest":
-        allowed_modes = {"optimized", "high_quality", "max_quality"}
+        allowed_modes = {"optimized", "high_quality", "max_quality", "whisper_api"}
         if self.transcription_mode not in allowed_modes:
-            raise ValueError("transcription_mode must be one of: optimized, high_quality, max_quality")
+            raise ValueError("transcription_mode must be one of: optimized, high_quality, max_quality, whisper_api")
         return self
 
 

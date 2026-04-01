@@ -727,6 +727,7 @@ export function ChapterReviewPage({
             <AltTakesPanel
               clusters={altTakeClusters}
               issues={issues}
+              audioUrl={chapter ? getChapterAudioUrl(chapter.id, chapter.analysis_artifact_updated_at) : null}
               onSelectPreferred={async (clusterId, issueId) => {
                 await setPreferredTake(clusterId, issueId)
                 void loadChapter({ showLoading: false })
@@ -746,7 +747,7 @@ export function ChapterReviewPage({
         </div>
 
         <div className="review-column">
-          <ManuscriptPanel text={chapter?.raw_text ?? ""} />
+          <ManuscriptPanel text={chapter?.raw_text ?? ""} highlightText={selectedIssue?.expected_text} />
         </div>
       </div>
 

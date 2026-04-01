@@ -1,6 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from "react"
 import WaveSurfer from "wavesurfer.js"
-import { CollapsibleSection } from "./CollapsibleSection"
 
 type SpokenToken = {
   index: number
@@ -46,6 +45,7 @@ export function WaveformPanel({
   const [waveSurferReady, setWaveSurferReady] = useState(false)
   const [waveformZoom, setWaveformZoom] = useState(1)
   const [playbackRate, setPlaybackRate] = useState(1)
+  const [isPlaying, setIsPlaying] = useState(false)
   const onTimeUpdateRef = useRef(onTimeUpdate)
   const onPlayStateChangeRef = useRef(onPlayStateChange)
   useEffect(() => { onTimeUpdateRef.current = onTimeUpdate }, [onTimeUpdate])
@@ -112,8 +112,8 @@ export function WaveformPanel({
       }
     })
 
-    const unsubscribePlay = ws.on("play", () => onPlayStateChangeRef.current?.(true))
-    const unsubscribePause = ws.on("pause", () => onPlayStateChangeRef.current?.(false))
+    const unsubscribePlay = ws.on("play", () => { setIsPlaying(true); onPlayStateChangeRef.current?.(true) })
+    const unsubscribePause = ws.on("pause", () => { setIsPlaying(false); onPlayStateChangeRef.current?.(false) })
 
     function handleTogglePlay() {
       ws.playPause()
@@ -183,10 +183,6 @@ export function WaveformPanel({
     return `${minutes}:${seconds.toString().padStart(2, "0")}`
   }
 
-  function formatWindow(startMs: number, endMs: number) {
-    return `${formatSeconds(startMs / 1000)} to ${formatSeconds(endMs / 1000)}`
-  }
-
   function handlePlayPause() {
     const ws = waveSurferRef.current
     if (!ws || waveformError) return
@@ -208,117 +204,105 @@ export function WaveformPanel({
   }
 
   return (
-    <CollapsibleSection title="Waveform" storageKey="chapter-review:waveform">
-      <div className="waveform-stage">
-        <div className="waveform" ref={containerRef} aria-live="polite" />
-        {waveformError ? (
-          <div className="waveform-error" role="alert">
-            <strong>
-              {waveformError === "No audio file available"
-                ? waveformError
-                : "Audio could not be loaded. The file may be corrupted or in an unsupported format."}
-            </strong>
-          </div>
-        ) : null}
-      </div>
-      <div className="waveform-zoom">
-        <label htmlFor="waveform-zoom">Gain</label>
-        <input
-          id="waveform-zoom"
-          type="range"
-          min={1}
-          max={8}
-          step={0.5}
-          value={waveformZoom}
-          onChange={(e) => {
-            const zoom = parseFloat(e.target.value)
-            setWaveformZoom(zoom)
-            waveSurferRef.current?.setOptions({ height: Math.round(120 * zoom) })
-          }}
-        />
-        <span className="muted">{waveformZoom}x</span>
-      </div>
-      <div className="playback-speed">
-        <label htmlFor="playback-rate">Speed</label>
-        <select
-          id="playback-rate"
-          value={playbackRate}
-          onChange={(e) => {
-            const rate = parseFloat(e.target.value)
-            setPlaybackRate(rate)
-            waveSurferRef.current?.setPlaybackRate(rate)
-          }}
-        >
-          <option value={0.5}>0.5x</option>
-          <option value={0.75}>0.75x</option>
-          <option value={1}>1x</option>
-          <option value={1.25}>1.25x</option>
-          <option value={1.5}>1.5x</option>
-          <option value={2}>2x</option>
-        </select>
-      </div>
-      <FollowAlongStrip tokens={spokenTokens ?? []} playbackTimeMs={Math.round(playbackTime * 1000)} isPlaying={waveSurferRef.current?.isPlaying() ?? false} />
-      {focusStartMs != null ? (
-        <div className="waveform-controls">
-          <div className="waveform-summary">
-            <strong>Selected Review Window</strong>
-            <p className="muted">
-              {focusEndMs != null
-                ? `${issueType ? issueType.replace(/_/g, " ") : "Issue"} at ${formatWindow(focusStartMs, focusEndMs)}`
-                : `Issue starts at ${formatSeconds(focusStartMs / 1000)}`}
-            </p>
-          </div>
-          <div className="row">
-            <button onClick={() => waveSurferRef.current?.setTime(focusStartMs / 1000)}>Jump to Issue</button>
-            <button onClick={handlePlayPause} disabled={!hasAudio}>
-              Play or Pause
-            </button>
-            <button
-              onClick={handlePreviewPlayback}
-              disabled={!hasAudio || previewStartSeconds == null || previewEndSeconds == null}
-            >
-              Preview Edited Join
-            </button>
-          </div>
-          <label className="toggle-row">
-            <input
-              type="checkbox"
-              checked={simulateEdit}
-              onChange={(event) => setSimulateEdit(event.target.checked)}
-              disabled={!hasAudio || focusEndMs == null}
-            />
-            <span>
-              Preview edit for this issue
-              {issueType ? ` (${issueType.replace(/_/g, " ")})` : ""}
-            </span>
-          </label>
-          <div className="waveform-meta">
-            {focusEndMs != null ? (
-              <span className="muted">Issue Window: {formatWindow(focusStartMs, focusEndMs)}</span>
-            ) : null}
-            {skipSpanSeconds > 0 ? (
-              <span className="muted">Suggested Cut: {skipSpanSeconds.toFixed(2)}s</span>
-            ) : null}
-            {previewStartSeconds != null && previewEndSeconds != null ? (
-              <span className="muted">
-                Preview Span: {formatSeconds(previewStartSeconds)} to {formatSeconds(previewEndSeconds)}
-              </span>
-            ) : null}
-            <span className="muted">Playhead: {formatSeconds(playbackTime)}</span>
-          </div>
-          <p className="muted">
-            {simulateEdit
-              ? "Playback will jump over the selected cut range so you can hear the stitched result."
-              : "Toggle preview edit to hear the selected issue as if the cut were already applied."}
-          </p>
+    <div className="waveform-sticky-panel">
+      <div className="waveform-sticky-main">
+        <div className="waveform-stage">
+          <div className="waveform" ref={containerRef} aria-live="polite" />
+          {waveformError ? (
+            <div className="waveform-error" role="alert">
+              <strong>
+                {waveformError === "No audio file available"
+                  ? waveformError
+                  : "Audio could not be loaded. The file may be corrupted or in an unsupported format."}
+              </strong>
+            </div>
+          ) : null}
         </div>
+
+        <div className="waveform-sticky-controls">
+          <div className="waveform-transport">
+            <button type="button" className="transport-btn" onClick={handlePlayPause} disabled={!hasAudio} title="Play/Pause (Space)">
+              {isPlaying ? "\u23F8" : "\u25B6"}
+            </button>
+            <span className="transport-time">{formatSeconds(playbackTime)} / {formatSeconds(durationSeconds)}</span>
+          </div>
+
+          <div className="waveform-inline-controls">
+            <label className="waveform-control-group">
+              <span>Gain</span>
+              <input
+                type="range"
+                min={1}
+                max={8}
+                step={0.5}
+                value={waveformZoom}
+                onChange={(e) => {
+                  const zoom = parseFloat(e.target.value)
+                  setWaveformZoom(zoom)
+                  waveSurferRef.current?.setOptions({ height: Math.round(120 * zoom) })
+                }}
+              />
+              <span className="muted">{waveformZoom}x</span>
+            </label>
+
+            <label className="waveform-control-group">
+              <span>Speed</span>
+              <select
+                value={playbackRate}
+                onChange={(e) => {
+                  const rate = parseFloat(e.target.value)
+                  setPlaybackRate(rate)
+                  waveSurferRef.current?.setPlaybackRate(rate)
+                }}
+              >
+                <option value={0.5}>0.5x</option>
+                <option value={0.75}>0.75x</option>
+                <option value={1}>1x</option>
+                <option value={1.25}>1.25x</option>
+                <option value={1.5}>1.5x</option>
+                <option value={2}>2x</option>
+              </select>
+            </label>
+          </div>
+
+          {focusStartMs != null ? (
+            <div className="waveform-issue-controls">
+              <span className="muted">
+                {issueType ? issueType.replace(/_/g, " ") : "Issue"}
+                {focusEndMs != null ? ` ${formatSeconds(focusStartMs / 1000)}-${formatSeconds(focusEndMs / 1000)}` : ""}
+                {skipSpanSeconds > 0 ? ` (${skipSpanSeconds.toFixed(1)}s)` : ""}
+              </span>
+              <button type="button" onClick={() => waveSurferRef.current?.setTime(focusStartMs / 1000)} title="Jump to issue start">
+                Jump
+              </button>
+              <button
+                type="button"
+                onClick={handlePreviewPlayback}
+                disabled={!hasAudio || previewStartSeconds == null || previewEndSeconds == null}
+                title="Preview edited join"
+              >
+                Preview
+              </button>
+              <label className="toggle-row compact">
+                <input
+                  type="checkbox"
+                  checked={simulateEdit}
+                  onChange={(event) => setSimulateEdit(event.target.checked)}
+                  disabled={!hasAudio || focusEndMs == null}
+                />
+                <span>Sim edit</span>
+              </label>
+            </div>
+          ) : null}
+        </div>
+      </div>
+
+      <FollowAlongStrip tokens={spokenTokens ?? []} playbackTimeMs={Math.round(playbackTime * 1000)} isPlaying={isPlaying} />
+
+      {!hasAudio ? (
+        <p className="muted waveform-hint">Upload a WAV to populate the review waveform.</p>
       ) : null}
-      <p className="muted">
-        {hasAudio
-          ? "Loaded chapter WAV for review. Select an issue to jump directly into its timing window."
-          : "Upload a WAV to populate the review waveform."}
-      </p>
-    </CollapsibleSection>
+    </div>
   )
 }
 

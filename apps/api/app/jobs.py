@@ -1,3 +1,4 @@
+import logging
 from threading import Lock, Thread
 from pathlib import Path
 
@@ -8,6 +9,8 @@ from .models import AnalysisJob, Chapter, utc_now
 from .services.export import build_auto_edit_export
 from .services.storage import ensure_chapter_dirs
 from .pipeline.analyze_chapter import run_analysis
+
+logger = logging.getLogger(__name__)
 
 # Cooperative cancellation: set of job IDs that have been requested to cancel.
 # Workers check this periodically and abort if their job ID appears.
@@ -47,7 +50,7 @@ def fail_analysis_job(
     try:
         session.rollback()
     except Exception:
-        pass
+        logger.debug("Rollback before fail_analysis_job had no effect", exc_info=True)
 
     if chapter is not None:
         chapter.status = "new"

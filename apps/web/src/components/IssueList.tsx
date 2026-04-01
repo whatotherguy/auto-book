@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState, type CSSProperties, type ReactNode } from "react"
+import { useCallback, useEffect, useMemo, useRef, useState, type CSSProperties, type ReactNode } from "react"
 import { Issue } from "../types"
 import { ConfidenceFilter, getConfidenceBand, getIssueTypeMeta, humanize, PRIORITY_COLORS, PRIORITY_ORDER } from "../utils"
 import { CollapsibleSection } from "./CollapsibleSection"
@@ -24,6 +24,9 @@ export function IssueList({
   loading = false,
 }: IssueListProps) {
   const [sortBy, setSortBy] = useState<"time" | "confidence" | "type" | "priority">("priority")
+  const scrollRef = useRef<HTMLDivElement>(null)
+  const [canScrollLeft, setCanScrollLeft] = useState(false)
+  const [canScrollRight, setCanScrollRight] = useState(false)
   const normalizedSearch = searchQuery.trim().toLowerCase()
 
   const visibleIssues = useMemo(() => issues.filter((issue) => {
@@ -62,6 +65,32 @@ export function IssueList({
     return sorted
   }, [visibleIssues, sortBy])
 
+  const updateScrollButtons = useCallback(() => {
+    const el = scrollRef.current
+    if (!el) return
+    setCanScrollLeft(el.scrollLeft > 2)
+    setCanScrollRight(el.scrollLeft + el.clientWidth < el.scrollWidth - 2)
+  }, [])
+
+  useEffect(() => {
+    const el = scrollRef.current
+    if (!el) return
+    updateScrollButtons()
+    el.addEventListener("scroll", updateScrollButtons, { passive: true })
+    const ro = new ResizeObserver(updateScrollButtons)
+    ro.observe(el)
+    return () => {
+      el.removeEventListener("scroll", updateScrollButtons)
+      ro.disconnect()
+    }
+  }, [updateScrollButtons, sortedIssues.length])
+
+  function scrollBy(direction: -1 | 1) {
+    const el = scrollRef.current
+    if (!el) return
+    el.scrollBy({ left: direction * 300, behavior: "smooth" })
+  }
+
   // Auto-scroll selected issue into view
   useEffect(() => {
     if (selectedIssueId == null) return
@@ -94,57 +123,69 @@ export function IssueList({
       ) : sortedIssues.length === 0 ? (
         <p className="muted">No issues match the current search and filters.</p>
       ) : (
-        <div className="issue-list-horizontal">
-          {sortedIssues.map((issue) => {
-            const isSelected = issue.id === selectedIssueId
-            const typeMeta = getIssueTypeMeta(issue.type)
-            const confidenceBand = getConfidenceBand(issue.confidence)
+        <div className="issue-list-scroll-wrapper">
+          {canScrollLeft ? (
+            <button type="button" className="issue-scroll-btn issue-scroll-left" onClick={() => scrollBy(-1)} aria-label="Scroll left">
+              &lsaquo;
+            </button>
+          ) : null}
+          <div className="issue-list-horizontal" ref={scrollRef}>
+            {sortedIssues.map((issue) => {
+              const isSelected = issue.id === selectedIssueId
+              const typeMeta = getIssueTypeMeta(issue.type)
+              const confidenceBand = getConfidenceBand(issue.confidence)
 
-            return (
-              <button
-                key={issue.id}
-                type="button"
-                className={`list-item issue-card ${isSelected ? "selected" : ""}`}
-                onClick={() => onSelect(issue)}
-                aria-pressed={isSelected}
-                aria-label={`${typeMeta.label} issue ${issue.id}`}
-              >
-                <div className="issue-card-row">
-                  <div className="issue-card-meta">
-                    {issue.recommendation?.priority && issue.recommendation.priority !== "info" ? (
-                      <span
-                        className="priority-dot"
-                        style={{ background: PRIORITY_COLORS[issue.recommendation.priority] ?? "transparent" }}
-                        title={`Priority: ${issue.recommendation.priority}`}
-                      />
-                    ) : null}
-                    <span className="issue-type-badge" style={{ "--issue-color": typeMeta.color } as CSSProperties}>
-                      {(typeMeta as any).icon ? `${(typeMeta as any).icon} ` : ""}{typeMeta.label}
-                    </span>
-                    <span className={`issue-confidence-badge ${confidenceBand.className}`}>{confidenceBand.label}</span>
+              return (
+                <button
+                  key={issue.id}
+                  type="button"
+                  className={`list-item issue-card ${isSelected ? "selected" : ""}`}
+                  onClick={() => onSelect(issue)}
+                  aria-pressed={isSelected}
+                  aria-label={`${typeMeta.label} issue ${issue.id}`}
+                >
+                  <div className="issue-card-row">
+                    <div className="issue-card-meta">
+                      {issue.recommendation?.priority && issue.recommendation.priority !== "info" ? (
+                        <span
+                          className="priority-dot"
+                          style={{ background: PRIORITY_COLORS[issue.recommendation.priority] ?? "transparent" }}
+                          title={`Priority: ${issue.recommendation.priority}`}
+                        />
+                      ) : null}
+                      <span className="issue-type-badge" style={{ "--issue-color": typeMeta.color } as CSSProperties}>
+                        {(typeMeta as any).icon ? `${(typeMeta as any).icon} ` : ""}{typeMeta.label}
+                      </span>
+                      <span className={`issue-confidence-badge ${confidenceBand.className}`}>{confidenceBand.label}</span>
+                    </div>
+                    <span className="pill">{humanize(issue.status)}</span>
                   </div>
-                  <span className="pill">{humanize(issue.status)}</span>
-                </div>
 
-                {issue.triage_verdict ? (
-                  <div className="issue-card-meta">
-                    <span className={`issue-triage-badge ${issue.triage_verdict}`} title={issue.triage_reason ?? ""}>
-                      {issue.triage_verdict === "dismiss" ? "AI: Likely OK" : issue.triage_verdict === "keep" ? "AI: Review" : "AI: Unclear"}
+                  {issue.triage_verdict ? (
+                    <div className="issue-card-meta">
+                      <span className={`issue-triage-badge ${issue.triage_verdict}`} title={issue.triage_reason ?? ""}>
+                        {issue.triage_verdict === "dismiss" ? "AI: Likely OK" : issue.triage_verdict === "keep" ? "AI: Review" : "AI: Unclear"}
+                      </span>
+                    </div>
+                  ) : null}
+
+                  <div className="issue-card-text">
+                    <span className="issue-card-field">
+                      <strong>Expected:</strong> {renderHighlightedText(issue.expected_text, normalizedSearch)}
+                    </span>
+                    <span className="issue-card-field">
+                      <strong>Spoken:</strong> {renderHighlightedText(issue.spoken_text, normalizedSearch)}
                     </span>
                   </div>
-                ) : null}
-
-                <div className="issue-card-text">
-                  <span className="issue-card-field">
-                    <strong>Expected:</strong> {renderHighlightedText(issue.expected_text, normalizedSearch)}
-                  </span>
-                  <span className="issue-card-field">
-                    <strong>Spoken:</strong> {renderHighlightedText(issue.spoken_text, normalizedSearch)}
-                  </span>
-                </div>
-              </button>
-            )
-          })}
+                </button>
+              )
+            })}
+          </div>
+          {canScrollRight ? (
+            <button type="button" className="issue-scroll-btn issue-scroll-right" onClick={() => scrollBy(1)} aria-label="Scroll right">
+              &rsaquo;
+            </button>
+          ) : null}
         </div>
       )}
     </CollapsibleSection>

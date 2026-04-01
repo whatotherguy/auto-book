@@ -18,3 +18,8 @@ Thumbs.db
 # Data artifacts
 data/projects/*
 !data/.gitkeep
+
+# SQLite journal files
+data/*.db-shm
+data/*.db-wal
+data/*.db-journal

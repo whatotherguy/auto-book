@@ -2,33 +2,49 @@ import { useState } from "react"
 import { AltTakeCluster, Issue } from "../types"
 import { formatTimecode } from "../utils"
 import { CollapsibleSection } from "./CollapsibleSection"
+import { AltTakeComparison } from "./AltTakeComparison"
 
 type AltTakesPanelProps = {
   clusters: AltTakeCluster[]
   issues: Issue[]
+  audioUrl: string | null
   onSelectPreferred: (clusterId: number, issueId: number) => Promise<void>
   onSelectIssue: (issue: Issue) => void
 }
 
-export function AltTakesPanel({ clusters, issues, onSelectPreferred, onSelectIssue }: AltTakesPanelProps) {
+export function AltTakesPanel({ clusters, issues, audioUrl, onSelectPreferred, onSelectIssue }: AltTakesPanelProps) {
+  const [compareCluster, setCompareCluster] = useState<AltTakeCluster | null>(null)
+
   if (clusters.length === 0) return null
 
   return (
-    <CollapsibleSection
-      title="Alternate Takes"
-      subtitle={`${clusters.length} cluster${clusters.length === 1 ? "" : "s"}`}
-      storageKey="chapter-review:alt-takes"
-    >
-      {clusters.map((cluster) => (
-        <ClusterCard
-          key={cluster.id}
-          cluster={cluster}
+    <>
+      <CollapsibleSection
+        title="Alternate Takes"
+        subtitle={`${clusters.length} cluster${clusters.length === 1 ? "" : "s"}`}
+        storageKey="chapter-review:alt-takes"
+      >
+        {clusters.map((cluster) => (
+          <ClusterCard
+            key={cluster.id}
+            cluster={cluster}
+            issues={issues}
+            onSelectPreferred={onSelectPreferred}
+            onSelectIssue={onSelectIssue}
+            onCompare={() => setCompareCluster(cluster)}
+          />
+        ))}
+      </CollapsibleSection>
+      {compareCluster ? (
+        <AltTakeComparison
+          cluster={compareCluster}
           issues={issues}
+          audioUrl={audioUrl}
           onSelectPreferred={onSelectPreferred}
-          onSelectIssue={onSelectIssue}
+          onClose={() => setCompareCluster(null)}
         />
-      ))}
-    </CollapsibleSection>
+      ) : null}
+    </>
   )
 }
 
@@ -37,11 +53,13 @@ function ClusterCard({
   issues,
   onSelectPreferred,
   onSelectIssue,
+  onCompare,
 }: {
   cluster: AltTakeCluster
   issues: Issue[]
   onSelectPreferred: (clusterId: number, issueId: number) => Promise<void>
   onSelectIssue: (issue: Issue) => void
+  onCompare: () => void
 }) {
   const [expanded, setExpanded] = useState(false)
   const [saving, setSaving] = useState(false)
@@ -63,7 +81,20 @@ function ClusterCard({
           {expanded ? "\u25bc" : "\u25b6"} {cluster.manuscript_text.slice(0, 60)}
           {cluster.manuscript_text.length > 60 ? "..." : ""}
         </span>
-        <span className="pill">{cluster.members.length} takes</span>
+        <div className="alt-cluster-header-right">
+          <span className="pill">{cluster.members.length} takes</span>
+          <button
+            type="button"
+            className="alt-compare-open-btn"
+            onClick={(e) => {
+              e.stopPropagation()
+              onCompare()
+            }}
+            title="Compare takes side by side"
+          >
+            Compare
+          </button>
+        </div>
       </button>
       {expanded ? (
         <div className="alt-cluster-body">

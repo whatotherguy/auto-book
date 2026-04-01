@@ -180,9 +180,6 @@ async def upload_audio(chapter_id: int, file: UploadFile = File(...), session: S
     if Path(filename).suffix.lower() != ".wav":
         raise HTTPException(status_code=400, detail="Only .wav audio files are supported")
 
-    # Reset first so source/working/analysis dirs are empty before we write anything
-    reset_chapter_audio_review_state(session, chapter)
-
     dirs = ensure_chapter_dirs(chapter.project_id, chapter.chapter_number)
     temp_target = dirs["working"] / f".upload-{filename}"
     total_size = 0
@@ -200,6 +197,9 @@ async def upload_audio(chapter_id: int, file: UploadFile = File(...), session: S
     except ValueError as exc:
         temp_target.unlink(missing_ok=True)
         raise HTTPException(status_code=400, detail=str(exc)) from exc
+
+    # Reset only after validating the upload — avoids wiping state on bad files
+    reset_chapter_audio_review_state(session, chapter)
 
     target = dirs["source"] / filename
     shutil.move(str(temp_target), str(target))

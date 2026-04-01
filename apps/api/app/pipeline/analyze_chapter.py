@@ -219,7 +219,7 @@ def run_analysis(
                 session.add(job)
                 session.commit()
         except Exception as cleanup_exc:
-            logger.error("Failed to update job status in finally block: %s", cleanup_exc)
+            logger.warning("Failed to update job status in finally block: %s", cleanup_exc)
 
 
 def _persist_signal_data(

@@ -7,6 +7,7 @@ type AltTakeComparisonProps = {
   issues: Issue[]
   audioUrl: string | null
   onSelectPreferred: (clusterId: number, issueId: number) => Promise<void>
+  onRejectTake: (issue: Issue) => Promise<void>
   onClose: () => void
 }
 
@@ -15,28 +16,64 @@ export function AltTakeComparison({
   issues,
   audioUrl,
   onSelectPreferred,
+  onRejectTake,
   onClose,
 }: AltTakeComparisonProps) {
   const [playingId, setPlayingId] = useState<number | null>(null)
   const [saving, setSaving] = useState(false)
   const audioRef = useRef<HTMLAudioElement | null>(null)
   const loadedUrlRef = useRef<string | null>(null)
-  const listenersRef = useRef<{ timeupdate?: () => void; ended?: () => void }>({})
+  const rafRef = useRef<number | null>(null)
+  const endTimeRef = useRef<number>(0)
 
   const memberIssues = cluster.members
-    .map((m) => issues.find((i) => i.id === m.issue_id))
-    .filter((i): i is Issue => i != null)
-    .sort((a, b) => a.start_ms - b.start_ms)
+    .map((m) => {
+      const issue = issues.find((i) => i.id === m.issue_id)
+      return issue ? { issue, takeOrder: m.take_order } : null
+    })
+    .filter((entry): entry is { issue: Issue; takeOrder: number } => entry != null)
+    .sort((a, b) => a.takeOrder - b.takeOrder)
 
   const ranking = cluster.ranking
 
+  function stopPlayback() {
+    if (rafRef.current != null) {
+      cancelAnimationFrame(rafRef.current)
+      rafRef.current = null
+    }
+    audioRef.current?.pause()
+    setPlayingId(null)
+  }
+
+  function startRafLoop(audio: HTMLAudioElement) {
+    function tick() {
+      if (audio.paused || audio.ended) {
+        setPlayingId(null)
+        rafRef.current = null
+        return
+      }
+      if (audio.currentTime >= endTimeRef.current) {
+        audio.pause()
+        setPlayingId(null)
+        rafRef.current = null
+        return
+      }
+      rafRef.current = requestAnimationFrame(tick)
+    }
+    rafRef.current = requestAnimationFrame(tick)
+  }
+
   useEffect(() => {
+    function handleWaveformPlaying() {
+      stopPlayback()
+    }
+    window.addEventListener("waveform-playing", handleWaveformPlaying)
     return () => {
+      window.removeEventListener("waveform-playing", handleWaveformPlaying)
+      if (rafRef.current != null) cancelAnimationFrame(rafRef.current)
       const audio = audioRef.current
       if (audio) {
         audio.pause()
-        if (listenersRef.current.timeupdate) audio.removeEventListener("timeupdate", listenersRef.current.timeupdate)
-        if (listenersRef.current.ended) audio.removeEventListener("ended", listenersRef.current.ended)
         audio.src = ""
       }
     }
@@ -46,51 +83,38 @@ export function AltTakeComparison({
     if (!audioUrl) return
 
     if (playingId === issue.id) {
-      audioRef.current?.pause()
-      setPlayingId(null)
+      stopPlayback()
       return
     }
+
+    // Stop any current playback
+    stopPlayback()
 
     if (!audioRef.current) {
       audioRef.current = new Audio()
     }
     const audio = audioRef.current
-    audio.pause()
-
-    // Remove previous listeners using saved references
-    if (listenersRef.current.timeupdate) audio.removeEventListener("timeupdate", listenersRef.current.timeupdate)
-    if (listenersRef.current.ended) audio.removeEventListener("ended", listenersRef.current.ended)
 
     const startTime = issue.start_ms / 1000
-    const endTime = issue.end_ms / 1000
-
-    function onTimeUpdate() {
-      if (audio.currentTime >= endTime) {
-        audio.pause()
-        setPlayingId(null)
-      }
-    }
-    function onEnded() {
-      setPlayingId(null)
-    }
-
-    listenersRef.current = { timeupdate: onTimeUpdate, ended: onEnded }
-    audio.addEventListener("timeupdate", onTimeUpdate)
-    audio.addEventListener("ended", onEnded)
+    endTimeRef.current = issue.end_ms / 1000
 
     setPlayingId(issue.id)
+    window.dispatchEvent(new CustomEvent("alt-take-playing"))
 
-    function startPlayback() {
+    function beginPlay() {
       audio.currentTime = startTime
-      void audio.play()
+      const playPromise = audio.play()
+      if (playPromise) {
+        playPromise.then(() => startRafLoop(audio)).catch(() => setPlayingId(null))
+      }
     }
 
     if (loadedUrlRef.current === audioUrl) {
-      startPlayback()
+      beginPlay()
     } else {
       audio.src = audioUrl
       loadedUrlRef.current = audioUrl
-      audio.addEventListener("loadedmetadata", startPlayback, { once: true })
+      audio.addEventListener("loadedmetadata", beginPlay, { once: true })
     }
   }
 
@@ -116,31 +140,39 @@ export function AltTakeComparison({
           <button type="button" className="job-popup-btn" onClick={onClose} aria-label="Close">&times;</button>
         </div>
 
+        <div className="alt-compare-manuscript">
+          <strong>Manuscript:</strong> "{cluster.manuscript_text}"
+        </div>
+
         <div className="alt-compare-grid">
-          {memberIssues.map((issue, idx) => {
+          {memberIssues.map(({ issue, takeOrder }) => {
             const isPreferred = cluster.preferred_issue_id === issue.id
             const isCurrentlyPlaying = playingId === issue.id
             const rankedTake = ranking?.ranked_takes?.find((t) => t.issue_id === issue.id)
+            const isRejected = issue.status === "rejected"
+            const spokenMatchesExpected = issue.spoken_text.trim().toLowerCase() === issue.expected_text.trim().toLowerCase()
+
+            if (isRejected) return null
 
             return (
               <div key={issue.id} className={`alt-compare-card${isPreferred ? " preferred" : ""}`}>
                 <div className="alt-compare-card-header">
-                  <span className="alt-compare-take-num">Take {idx + 1}</span>
+                  <span className="alt-compare-take-num">Take {takeOrder + 1}</span>
                   {isPreferred ? <span className="alt-compare-preferred-badge">Preferred</span> : null}
                   {rankedTake ? <span className="muted">Rank #{rankedTake.rank}</span> : null}
                 </div>
 
-                <div className="alt-compare-time">
-                  {formatTimecode(issue.start_ms)} - {formatTimecode(issue.end_ms)}
+                <div className="alt-compare-spoken-text">
+                  "{issue.spoken_text}"
+                  {!spokenMatchesExpected && (
+                    <span className="alt-compare-text-mismatch" title="Spoken text differs from manuscript">
+                      (differs from manuscript)
+                    </span>
+                  )}
                 </div>
 
-                <div className="alt-compare-text">
-                  <div className="alt-compare-field">
-                    <strong>Spoken:</strong> {issue.spoken_text}
-                  </div>
-                  <div className="alt-compare-field">
-                    <strong>Expected:</strong> {issue.expected_text}
-                  </div>
+                <div className="alt-compare-time muted">
+                  {formatTimecode(issue.start_ms)} - {formatTimecode(issue.end_ms)}
                 </div>
 
                 {rankedTake ? (
@@ -174,14 +206,25 @@ export function AltTakeComparison({
                     {isCurrentlyPlaying ? "\u23F8 Pause" : "\u25B6 Listen"}
                   </button>
                   {!isPreferred ? (
-                    <button
-                      type="button"
-                      className="alt-compare-select-btn"
-                      disabled={saving}
-                      onClick={() => void handleSelect(issue.id)}
-                    >
-                      {saving ? "..." : "Select This Take"}
-                    </button>
+                    <>
+                      <button
+                        type="button"
+                        className="alt-compare-select-btn"
+                        disabled={saving}
+                        onClick={() => void handleSelect(issue.id)}
+                      >
+                        {saving ? "..." : "Select This Take"}
+                      </button>
+                      <button
+                        type="button"
+                        className="alt-compare-reject-btn"
+                        disabled={saving}
+                        onClick={() => void onRejectTake(issue)}
+                        title="Mark for cut and remove from comparison"
+                      >
+                        Reject
+                      </button>
+                    </>
                   ) : (
                     <span className="alt-compare-selected-label">Selected</span>
                   )}

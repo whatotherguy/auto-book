@@ -62,7 +62,7 @@ export function ChapterReviewPage({
   const [issues, setIssues] = useState<Issue[]>([])
   const [selectedIssueId, setSelectedIssueId] = useState<number | null>(null)
   const [searchQuery, setSearchQuery] = useState("")
-  const [typeFilter, setTypeFilter] = useState("all")
+  const [enabledTypes, setEnabledTypes] = useState<Set<string> | "all">("all")
   const [confidenceFilter, setConfidenceFilter] = useState<ConfidenceFilter>("all")
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
@@ -410,11 +410,11 @@ export function ChapterReviewPage({
     }
   }
 
-  async function handleBatchStatusChange(status: IssueStatus, filter?: { type?: string; confidence?: ConfidenceFilter; search?: string }) {
+  async function handleBatchStatusChange(status: IssueStatus, filter?: { enabledTypes?: Set<string> | "all"; confidence?: ConfidenceFilter; search?: string }) {
     const normalizedSearch = (filter?.search ?? "").trim().toLowerCase()
     const targetIssues = issues.filter((issue) => {
       if (issue.status === status) return false
-      if (filter?.type && filter.type !== "all" && issue.type !== filter.type) return false
+      if (filter?.enabledTypes && filter.enabledTypes !== "all" && !filter.enabledTypes.has(issue.type)) return false
       if (filter?.confidence && filter.confidence !== "all") {
         if (filter.confidence === "high" && issue.confidence < 0.85) return false
         if (filter.confidence === "medium" && (issue.confidence < 0.65 || issue.confidence >= 0.85)) return false
@@ -570,19 +570,55 @@ export function ChapterReviewPage({
             />
           </div>
 
-          <div className="review-toolbar-fields">
-            <label htmlFor="issue-type-filter">
-              Type
-              <Tooltip text="Filter by detection category."><span className="muted"> (?)</span></Tooltip>
+          <div className="review-toolbar-fields type-toggle-group">
+            <label>
+              Types
+              <Tooltip text="Toggle issue types on/off. Click to toggle individual types."><span className="muted"> (?)</span></Tooltip>
             </label>
-            <select id="issue-type-filter" value={typeFilter} onChange={(event) => setTypeFilter(event.target.value)}>
-              <option value="all">All types ({issues.length})</option>
-              {issueTypeOptions.map(([type, meta]) => (
-                <option key={type} value={type}>
-                  {meta.label} ({issueTypeCounts[type] ?? 0})
-                </option>
-              ))}
-            </select>
+            <div className="type-toggle-chips">
+              <button
+                type="button"
+                className={`type-chip${enabledTypes === "all" ? " active" : ""}`}
+                onClick={() => setEnabledTypes("all")}
+                style={{ borderColor: "var(--color-border)" }}
+              >
+                All ({issues.length})
+              </button>
+              {issueTypeOptions.map(([type, meta]) => {
+                const count = issueTypeCounts[type] ?? 0
+                if (count === 0) return null
+                const isActive = enabledTypes === "all" || enabledTypes.has(type)
+                return (
+                  <button
+                    key={type}
+                    type="button"
+                    className={`type-chip${isActive ? " active" : ""}`}
+                    style={{ borderColor: meta.color, ...(isActive ? { background: meta.color + "22" } : {}) }}
+                    onClick={() => {
+                      if (enabledTypes === "all") {
+                        // Switch from all to only this type
+                        setEnabledTypes(new Set([type]))
+                      } else {
+                        const next = new Set(enabledTypes)
+                        if (next.has(type)) {
+                          next.delete(type)
+                          if (next.size === 0) setEnabledTypes("all")
+                          else setEnabledTypes(next)
+                        } else {
+                          next.add(type)
+                          // If all types are now selected, go back to "all"
+                          const allTypes = issueTypeOptions.filter(([t]) => (issueTypeCounts[t] ?? 0) > 0).map(([t]) => t)
+                          if (allTypes.every((t) => next.has(t))) setEnabledTypes("all")
+                          else setEnabledTypes(next)
+                        }
+                      }
+                    }}
+                  >
+                    {meta.icon ? `${meta.icon} ` : ""}{meta.label} ({count})
+                  </button>
+                )
+              })}
+            </div>
           </div>
 
           <div className="review-toolbar-fields">
@@ -603,7 +639,7 @@ export function ChapterReviewPage({
               Transcription
               <Tooltip text="Optimized is fastest. Max Quality uses the largest model."><span className="muted"> (?)</span></Tooltip>
             </label>
-            <select id="transcription-mode" value={transcriptionMode} onChange={(event) => setTranscriptionMode(event.target.value as TranscriptionMode)} disabled={isAnalysisRunning}>
+            <select id="transcription-mode" value={transcriptionMode} onChange={(event) => setTranscriptionMode(event.target.value as TranscriptionMode)} disabled={isAnalysisRunning || appSettings?.transcription_backend === "whisper_api"}>
               <option value="optimized">Optimized{gpuInfo?.available ? " (GPU)" : ""}</option>
               <option value="high_quality">High Quality{gpuInfo?.available ? " (GPU)" : " (slow)"}</option>
               <option value="max_quality">Max Quality{gpuInfo?.available ? " (GPU)" : " (very slow)"}</option>
@@ -611,7 +647,11 @@ export function ChapterReviewPage({
                 <option value="whisper_api">Whisper API (cloud)</option>
               )}
             </select>
-            {gpuInfo ? (
+            {appSettings?.transcription_backend === "whisper_api" && transcriptionMode !== "whisper_api" ? (
+              <span className="muted" style={{ fontSize: "0.72rem", color: "var(--color-info, #60a5fa)" }}>
+                Using Whisper API (set in Settings)
+              </span>
+            ) : gpuInfo ? (
               <span className="muted" style={{ fontSize: "0.72rem" }}>
                 {gpuInfo.available ? `GPU: ${gpuInfo.name}` : "CPU only"}
               </span>
@@ -672,10 +712,10 @@ export function ChapterReviewPage({
           </div>
 
           <div className="action-group">
-            <button type="button" className="approve-button" onClick={() => void handleBatchStatusChange("approved", { type: typeFilter, confidence: confidenceFilter, search: searchQuery })} disabled={isBatchUpdating || issues.length === 0}>
+            <button type="button" className="approve-button" onClick={() => void handleBatchStatusChange("approved", { enabledTypes, confidence: confidenceFilter, search: searchQuery })} disabled={isBatchUpdating || issues.length === 0}>
               {isBatchUpdating ? "..." : "Approve Filtered"}
             </button>
-            <button type="button" className="reject-button" onClick={() => void handleBatchStatusChange("rejected", { type: typeFilter, confidence: confidenceFilter, search: searchQuery })} disabled={isBatchUpdating || issues.length === 0}>
+            <button type="button" className="reject-button" onClick={() => void handleBatchStatusChange("rejected", { enabledTypes, confidence: confidenceFilter, search: searchQuery })} disabled={isBatchUpdating || issues.length === 0}>
               Reject Filtered
             </button>
           </div>
@@ -693,6 +733,7 @@ export function ChapterReviewPage({
           playheadMs={playbackTimeMs}
           audioSignals={audioSignals}
           vadSegments={vadSegments}
+          enabledTypes={enabledTypes}
         />
       )}
 
@@ -712,7 +753,7 @@ export function ChapterReviewPage({
         selectedIssueId={selectedIssueId}
         onSelect={(issue) => setSelectedIssueId(issue.id)}
         searchQuery={searchQuery}
-        typeFilter={typeFilter}
+        enabledTypes={enabledTypes}
         confidenceFilter={confidenceFilter}
         loading={loading}
       />
@@ -728,6 +769,12 @@ export function ChapterReviewPage({
               onSelectPreferred={async (clusterId, issueId) => {
                 await setPreferredTake(clusterId, issueId)
                 void loadChapter({ showLoading: false })
+              }}
+              onRejectTake={async (issue) => {
+                await handleIssueStatusChange(issue, "rejected")
+              }}
+              onRestoreTake={async (issue) => {
+                await handleIssueStatusChange(issue, "needs_manual")
               }}
               onSelectIssue={(issue) => setSelectedIssueId(issue.id)}
             />

@@ -1,4 +1,5 @@
 from fastapi import APIRouter, Depends, HTTPException
+from sqlalchemy import func
 from sqlmodel import Session, delete, select
 
 from ..db import get_session
@@ -20,7 +21,25 @@ def create_project(payload: ProjectCreate, session: Session = Depends(get_sessio
 
 @router.get("")
 def list_projects(session: Session = Depends(get_session)):
-    return session.exec(select(Project)).all()
+    projects = session.exec(select(Project)).all()
+
+    # Build chapter counts in one query
+    counts_q = (
+        select(Chapter.project_id, func.count(Chapter.id))
+        .group_by(Chapter.project_id)
+    )
+    counts = dict(session.exec(counts_q).all())
+
+    return [
+        {
+            "id": p.id,
+            "name": p.name,
+            "created_at": p.created_at.isoformat() if p.created_at else None,
+            "updated_at": p.updated_at.isoformat() if p.updated_at else None,
+            "chapter_count": counts.get(p.id, 0),
+        }
+        for p in projects
+    ]
 
 
 @router.get("/{project_id}")

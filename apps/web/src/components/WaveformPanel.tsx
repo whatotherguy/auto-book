@@ -118,7 +118,15 @@ export function WaveformPanel({
     function handleTogglePlay() {
       ws.playPause()
     }
+    function handleAltTakePlaying() {
+      if (ws.isPlaying()) ws.pause()
+    }
     window.addEventListener("waveform-toggle-play", handleTogglePlay)
+    window.addEventListener("alt-take-playing", handleAltTakePlaying)
+
+    const unsubscribeWaveformPlay = ws.on("play", () => {
+      window.dispatchEvent(new CustomEvent("waveform-playing"))
+    })
 
     return () => {
       unsubscribeReady()
@@ -126,7 +134,9 @@ export function WaveformPanel({
       unsubscribeTimeupdate()
       unsubscribePlay()
       unsubscribePause()
+      unsubscribeWaveformPlay()
       window.removeEventListener("waveform-toggle-play", handleTogglePlay)
+      window.removeEventListener("alt-take-playing", handleAltTakePlaying)
       ws.destroy()
     }
   }, [])

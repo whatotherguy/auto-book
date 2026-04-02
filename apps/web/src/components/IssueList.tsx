@@ -9,7 +9,7 @@ type IssueListProps = {
   selectedIssueId: number | null
   onSelect: (issue: Issue) => void
   searchQuery: string
-  typeFilter: string
+  enabledTypes: Set<string> | "all"
   confidenceFilter: ConfidenceFilter
   loading?: boolean
 }
@@ -19,7 +19,7 @@ export function IssueList({
   selectedIssueId,
   onSelect,
   searchQuery,
-  typeFilter,
+  enabledTypes,
   confidenceFilter,
   loading = false,
 }: IssueListProps) {
@@ -30,7 +30,7 @@ export function IssueList({
   const normalizedSearch = searchQuery.trim().toLowerCase()
 
   const visibleIssues = useMemo(() => issues.filter((issue) => {
-    if (typeFilter !== "all" && issue.type !== typeFilter) {
+    if (enabledTypes !== "all" && !enabledTypes.has(issue.type)) {
       return false
     }
 
@@ -39,7 +39,7 @@ export function IssueList({
     }
 
     return normalizedSearch.length === 0 || issueMatchesSearch(issue, normalizedSearch)
-  }), [issues, typeFilter, confidenceFilter, normalizedSearch])
+  }), [issues, enabledTypes, confidenceFilter, normalizedSearch])
 
   const sortedIssues = useMemo(() => {
     const sorted = [...visibleIssues]

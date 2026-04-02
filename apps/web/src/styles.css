@@ -524,10 +524,155 @@ form {
 .list-item-row {
   display: flex;
   gap: 8px;
+  align-items: stretch;
+  transition: background 0.15s, box-shadow 0.15s;
+  border-radius: 14px;
 }
 
 .list-item-grow {
   flex: 1;
+}
+
+.list-item-row.row-selected {
+  background: rgba(103, 232, 249, 0.05);
+  box-shadow: inset 0 0 0 1px rgba(103, 232, 249, 0.15);
+  border-radius: 14px;
+}
+
+/* --- Rich Card --- */
+.rich-card {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding: 14px 16px;
+}
+.rich-card-top {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+.rich-card-title {
+  font-size: 1rem;
+  font-weight: 500;
+  color: #e2e8f0;
+  letter-spacing: -0.01em;
+}
+.rich-card-arrow {
+  font-size: 1.3rem;
+  color: #475569;
+  transition: color 0.15s, transform 0.15s;
+  line-height: 1;
+}
+.rich-card:hover .rich-card-arrow {
+  color: #67e8f9;
+  transform: translateX(2px);
+}
+.rich-card-meta {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 8px;
+  font-size: 0.78rem;
+}
+.rich-card-badge {
+  padding: 2px 8px;
+  border-radius: 6px;
+  background: rgba(103, 232, 249, 0.08);
+  color: #67e8f9;
+  font-weight: 500;
+  font-size: 0.72rem;
+  letter-spacing: 0.02em;
+}
+.rich-card-time {
+  color: #64748b;
+  font-size: 0.75rem;
+}
+.rich-card-duration {
+  color: #64748b;
+  font-size: 0.75rem;
+  font-variant-numeric: tabular-nums;
+}
+.rich-card-badges {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  flex-wrap: wrap;
+}
+
+/* --- Status Dots & Badges --- */
+.status-dot {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: rgba(100, 116, 139, 0.4);
+  flex-shrink: 0;
+}
+.status-dot.on {
+  background: #34d399;
+  box-shadow: 0 0 6px rgba(52, 211, 153, 0.4);
+}
+.status-dot.analyzed {
+  background: #67e8f9;
+  box-shadow: 0 0 6px rgba(103, 232, 249, 0.4);
+}
+.status-badge {
+  font-size: 0.7rem;
+  font-weight: 500;
+  letter-spacing: 0.02em;
+}
+.status-badge.ready {
+  color: #34d399;
+}
+.status-badge.analyzed {
+  color: #67e8f9;
+}
+.status-badge.dim {
+  color: #475569;
+}
+
+/* --- Batch Select --- */
+.batch-select-actions {
+  display: flex;
+  gap: 6px;
+  align-items: center;
+}
+.batch-btn {
+  padding: 4px 12px;
+  font-size: 0.78rem;
+  border: 1px solid rgba(148, 163, 184, 0.2);
+  border-radius: 8px;
+  background: transparent;
+  color: #94a3b8;
+  cursor: pointer;
+  transition: background 0.12s, color 0.12s;
+}
+.batch-btn:hover {
+  background: rgba(148, 163, 184, 0.1);
+  color: #e2e8f0;
+}
+.batch-btn.danger {
+  border-color: rgba(248, 113, 113, 0.3);
+  color: #fda4af;
+}
+.batch-btn.danger:hover {
+  background: rgba(248, 113, 113, 0.1);
+}
+.batch-btn.danger:disabled {
+  opacity: 0.5;
+  cursor: default;
+}
+.batch-checkbox {
+  display: flex;
+  align-items: center;
+  padding: 0 6px;
+  cursor: pointer;
+}
+.batch-checkbox input[type="checkbox"] {
+  width: 16px;
+  height: 16px;
+  accent-color: #67e8f9;
+  cursor: pointer;
 }
 
 .list-item.selected {
@@ -2143,6 +2288,25 @@ p {
   gap: 8px;
 }
 
+.skeleton-list-item {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  padding: 14px 16px;
+  border-radius: 14px;
+  border: 1px solid rgba(148, 163, 184, 0.08);
+  background: rgba(15, 23, 42, 0.5);
+}
+.skeleton-list-item-main {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+.skeleton-list-item-badges {
+  display: flex;
+  gap: 8px;
+}
+
 .skeleton-timeline {
   padding: 16px;
   border-radius: 16px;
@@ -2732,11 +2896,132 @@ p {
   font-weight: 500;
 }
 
+.alt-compare-reject-btn {
+  padding: 6px 14px;
+  font-size: 0.82rem;
+  border: 1px solid rgba(239, 68, 68, 0.3);
+  border-radius: 10px;
+  background: rgba(239, 68, 68, 0.08);
+  color: #ef4444;
+  cursor: pointer;
+}
+.alt-compare-reject-btn:hover {
+  background: rgba(239, 68, 68, 0.15);
+}
+
+.alt-take-reject-btn {
+  padding: 4px 10px;
+  font-size: 0.78rem;
+  border: 1px solid rgba(239, 68, 68, 0.3);
+  border-radius: 8px;
+  background: rgba(239, 68, 68, 0.08);
+  color: #ef4444;
+  cursor: pointer;
+}
+.alt-take-reject-btn:hover {
+  background: rgba(239, 68, 68, 0.15);
+}
+
+.alt-compare-manuscript {
+  padding: 0 0 12px;
+  font-size: 0.85rem;
+  color: #94a3b8;
+  line-height: 1.5;
+}
+
+.alt-compare-spoken-text {
+  font-size: 0.88rem;
+  color: #e2e8f0;
+  padding: 6px 0;
+  line-height: 1.4;
+  font-style: italic;
+}
+
+.alt-compare-text-mismatch {
+  font-size: 0.75rem;
+  color: #f59e0b;
+  margin-left: 6px;
+  font-style: normal;
+}
+
+.alt-take-spoken {
+  font-size: 0.82rem;
+  color: #e2e8f0;
+  padding: 2px 0 4px;
+  font-style: italic;
+  line-height: 1.3;
+}
+
+.alt-rejected-section {
+  margin-top: 8px;
+  border-top: 1px solid rgba(148, 163, 184, 0.08);
+  padding-top: 6px;
+}
+.alt-rejected-toggle {
+  font-size: 0.78rem;
+  color: #64748b;
+  background: none;
+  border: none;
+  cursor: pointer;
+  padding: 4px 0;
+}
+.alt-rejected-toggle:hover {
+  color: #94a3b8;
+}
+.alt-rejected-list {
+  padding-top: 4px;
+}
+.alt-take-card.rejected {
+  opacity: 0.5;
+  border-left-color: #ef4444;
+}
+.alt-take-restore-btn {
+  padding: 3px 10px;
+  font-size: 0.75rem;
+  border: 1px solid rgba(96, 165, 250, 0.3);
+  border-radius: 8px;
+  background: rgba(96, 165, 250, 0.08);
+  color: #60a5fa;
+  cursor: pointer;
+}
+.alt-take-restore-btn:hover {
+  background: rgba(96, 165, 250, 0.15);
+}
+
 .alt-compare-footer {
   padding: 12px 0 0;
   border-top: 1px solid rgba(148, 163, 184, 0.1);
   font-size: 0.85rem;
   color: #8ba0bd;
+}
+
+/* --- Type Toggle Chips --- */
+.type-toggle-group {
+  flex: 2 1 400px !important;
+  min-width: 300px !important;
+}
+.type-toggle-chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+}
+.type-chip {
+  padding: 3px 10px;
+  font-size: 0.75rem;
+  border: 1px solid rgba(148, 163, 184, 0.2);
+  border-radius: 12px;
+  background: transparent;
+  color: #8ba0bd;
+  cursor: pointer;
+  transition: background 0.15s, color 0.15s;
+  white-space: nowrap;
+}
+.type-chip:hover {
+  background: rgba(148, 163, 184, 0.1);
+}
+.type-chip.active {
+  color: #e2e8f0;
+  font-weight: 500;
 }
 
 /* --- Toolbar Action Drawer --- */

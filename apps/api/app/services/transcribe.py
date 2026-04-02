@@ -485,21 +485,28 @@ def transcribe_with_whisperx(
     if audio_path is None:
         return build_placeholder_transcript(manuscript_text, duration_ms)
 
-    # Check for cached transcript
+    # Determine if Whisper API backend is requested
+    from ..config import settings as app_settings
+    wants_api = transcription_mode == "whisper_api" or app_settings.transcription_backend == "whisper_api"
+
+    # Check for cached transcript (skip cache if backend changed)
     if cache_path is not None and cache_path.exists():
         try:
             import json
             cached = json.loads(cache_path.read_text(encoding="utf-8"))
             if not cached.get("is_placeholder") and cached.get("words"):
-                logger.info("Using cached transcript from %s", cache_path)
-                cached.setdefault("warnings", []).append("Loaded from cached transcript.")
-                return cached
+                cached_source = cached.get("source", "")
+                cached_is_api = "api" in cached_source.lower()
+                if wants_api == cached_is_api:
+                    logger.info("Using cached transcript from %s", cache_path)
+                    cached.setdefault("warnings", []).append("Loaded from cached transcript.")
+                    return cached
+                else:
+                    logger.info("Cached transcript source (%s) doesn't match requested backend (api=%s), re-transcribing", cached_source, wants_api)
         except (json.JSONDecodeError, OSError):
             pass  # Fall through to fresh transcription
 
-    # Check if Whisper API backend is selected (global setting or per-request mode)
-    from ..config import settings as app_settings
-    if transcription_mode == "whisper_api" or app_settings.transcription_backend == "whisper_api":
+    if wants_api:
         from .transcribe_api import is_whisper_api_available, transcribe_with_whisper_api
         if is_whisper_api_available():
             try:

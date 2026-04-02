@@ -1,4 +1,4 @@
-import { useState } from "react"
+import { useMemo, useState } from "react"
 import { AltTakeCluster, Issue } from "../types"
 import { formatTimecode } from "../utils"
 import { CollapsibleSection } from "./CollapsibleSection"
@@ -9,11 +9,17 @@ type AltTakesPanelProps = {
   issues: Issue[]
   audioUrl: string | null
   onSelectPreferred: (clusterId: number, issueId: number) => Promise<void>
+  onRejectTake: (issue: Issue) => Promise<void>
+  onRestoreTake: (issue: Issue) => Promise<void>
   onSelectIssue: (issue: Issue) => void
 }
 
-export function AltTakesPanel({ clusters, issues, audioUrl, onSelectPreferred, onSelectIssue }: AltTakesPanelProps) {
-  const [compareCluster, setCompareCluster] = useState<AltTakeCluster | null>(null)
+export function AltTakesPanel({ clusters, issues, audioUrl, onSelectPreferred, onRejectTake, onRestoreTake, onSelectIssue }: AltTakesPanelProps) {
+  const [compareClusterId, setCompareClusterId] = useState<number | null>(null)
+  const compareCluster = useMemo(
+    () => (compareClusterId != null ? clusters.find((c) => c.id === compareClusterId) ?? null : null),
+    [clusters, compareClusterId]
+  )
 
   if (clusters.length === 0) return null
 
@@ -30,8 +36,10 @@ export function AltTakesPanel({ clusters, issues, audioUrl, onSelectPreferred, o
             cluster={cluster}
             issues={issues}
             onSelectPreferred={onSelectPreferred}
+            onRejectTake={onRejectTake}
+            onRestoreTake={onRestoreTake}
             onSelectIssue={onSelectIssue}
-            onCompare={() => setCompareCluster(cluster)}
+            onCompare={() => setCompareClusterId(cluster.id)}
           />
         ))}
       </CollapsibleSection>
@@ -41,7 +49,8 @@ export function AltTakesPanel({ clusters, issues, audioUrl, onSelectPreferred, o
           issues={issues}
           audioUrl={audioUrl}
           onSelectPreferred={onSelectPreferred}
-          onClose={() => setCompareCluster(null)}
+          onRejectTake={onRejectTake}
+          onClose={() => setCompareClusterId(null)}
         />
       ) : null}
     </>
@@ -52,21 +61,31 @@ function ClusterCard({
   cluster,
   issues,
   onSelectPreferred,
+  onRejectTake,
+  onRestoreTake,
   onSelectIssue,
   onCompare,
 }: {
   cluster: AltTakeCluster
   issues: Issue[]
   onSelectPreferred: (clusterId: number, issueId: number) => Promise<void>
+  onRejectTake: (issue: Issue) => Promise<void>
+  onRestoreTake: (issue: Issue) => Promise<void>
   onSelectIssue: (issue: Issue) => void
   onCompare: () => void
 }) {
   const [expanded, setExpanded] = useState(false)
   const [saving, setSaving] = useState(false)
   const memberIssues = cluster.members
-    .map((m) => issues.find((i) => i.id === m.issue_id))
-    .filter((i): i is Issue => i != null)
-    .sort((a, b) => a.start_ms - b.start_ms)
+    .map((m) => {
+      const issue = issues.find((i) => i.id === m.issue_id)
+      return issue ? { issue, takeOrder: m.take_order } : null
+    })
+    .filter((entry): entry is { issue: Issue; takeOrder: number } => entry != null)
+    .sort((a, b) => a.takeOrder - b.takeOrder)
+
+  const activeTakes = memberIssues.filter(({ issue }) => issue.status !== "rejected")
+  const rejectedTakes = memberIssues.filter(({ issue }) => issue.status === "rejected")
 
   const ranking = cluster.ranking
 
@@ -78,11 +97,11 @@ function ClusterCard({
         className="alt-cluster-header"
       >
         <span className="alt-cluster-title">
-          {expanded ? "\u25bc" : "\u25b6"} {cluster.manuscript_text.slice(0, 60)}
-          {cluster.manuscript_text.length > 60 ? "..." : ""}
+          {expanded ? "\u25bc" : "\u25b6"} "{cluster.manuscript_text.slice(0, 60)}
+          {cluster.manuscript_text.length > 60 ? "..." : ""}"
         </span>
         <div className="alt-cluster-header-right">
-          <span className="pill">{cluster.members.length} takes</span>
+          <span className="pill">{activeTakes.length} takes</span>
           <button
             type="button"
             className="alt-compare-open-btn"
@@ -98,7 +117,7 @@ function ClusterCard({
       </button>
       {expanded ? (
         <div className="alt-cluster-body">
-          {memberIssues.map((issue, idx) => {
+          {activeTakes.map(({ issue, takeOrder }) => {
             const isPreferred = cluster.preferred_issue_id === issue.id
             const rankedTake = ranking?.ranked_takes?.find((t) => t.issue_id === issue.id)
             return (
@@ -109,12 +128,15 @@ function ClusterCard({
               >
                 <div className="alt-take-header">
                   <span className="alt-take-title">
-                    {isPreferred ? "* " : ""}Take {idx + 1}
+                    {isPreferred ? "* " : ""}Take {takeOrder + 1}
                     {rankedTake ? ` (Rank #${rankedTake.rank})` : ""}
                   </span>
-                  <span className="alt-take-time">
+                  <span className="alt-take-time muted">
                     {formatTimecode(issue.start_ms)} - {formatTimecode(issue.end_ms)}
                   </span>
+                </div>
+                <div className="alt-take-spoken">
+                  "{issue.spoken_text}"
                 </div>
                 {rankedTake ? (
                   <div className="alt-take-scores">
@@ -132,21 +154,40 @@ function ClusterCard({
                 ) : null}
                 <div className="alt-take-actions">
                   {!isPreferred ? (
-                    <button
-                      type="button"
-                      disabled={saving}
-                      onClick={async (e) => {
-                        e.stopPropagation()
-                        setSaving(true)
-                        try {
-                          await onSelectPreferred(cluster.id, issue.id)
-                        } finally {
-                          setSaving(false)
-                        }
-                      }}
-                    >
-                      Select as preferred
-                    </button>
+                    <>
+                      <button
+                        type="button"
+                        disabled={saving}
+                        onClick={async (e) => {
+                          e.stopPropagation()
+                          setSaving(true)
+                          try {
+                            await onSelectPreferred(cluster.id, issue.id)
+                          } finally {
+                            setSaving(false)
+                          }
+                        }}
+                      >
+                        Select as preferred
+                      </button>
+                      <button
+                        type="button"
+                        className="alt-take-reject-btn"
+                        disabled={saving}
+                        onClick={async (e) => {
+                          e.stopPropagation()
+                          setSaving(true)
+                          try {
+                            await onRejectTake(issue)
+                          } finally {
+                            setSaving(false)
+                          }
+                        }}
+                        title="Mark for cut"
+                      >
+                        Reject
+                      </button>
+                    </>
                   ) : (
                     <span className="alt-take-preferred-label">Preferred take</span>
                   )}
@@ -160,6 +201,60 @@ function ClusterCard({
               {ranking.confidence < 0.6 ? " (close call)" : ""}
             </div>
           ) : null}
+          {rejectedTakes.length > 0 ? (
+            <RejectedTakesSection
+              takes={rejectedTakes}
+              onRestore={onRestoreTake}
+              saving={saving}
+            />
+          ) : null}
+        </div>
+      ) : null}
+    </div>
+  )
+}
+
+function RejectedTakesSection({
+  takes,
+  onRestore,
+  saving,
+}: {
+  takes: { issue: Issue; takeOrder: number }[]
+  onRestore: (issue: Issue) => Promise<void>
+  saving: boolean
+}) {
+  const [shown, setShown] = useState(false)
+  return (
+    <div className="alt-rejected-section">
+      <button type="button" className="alt-rejected-toggle" onClick={() => setShown(!shown)}>
+        {shown ? "\u25bc" : "\u25b6"} {takes.length} rejected take{takes.length === 1 ? "" : "s"}
+      </button>
+      {shown ? (
+        <div className="alt-rejected-list">
+          {takes.map(({ issue, takeOrder }) => (
+            <div key={issue.id} className="alt-take-card rejected">
+              <div className="alt-take-header">
+                <span className="alt-take-title">Take {takeOrder + 1}</span>
+                <span className="alt-take-time muted">
+                  {formatTimecode(issue.start_ms)} - {formatTimecode(issue.end_ms)}
+                </span>
+              </div>
+              <div className="alt-take-spoken">"{issue.spoken_text}"</div>
+              <div className="alt-take-actions">
+                <button
+                  type="button"
+                  className="alt-take-restore-btn"
+                  disabled={saving}
+                  onClick={(e) => {
+                    e.stopPropagation()
+                    void onRestore(issue)
+                  }}
+                >
+                  Restore
+                </button>
+              </div>
+            </div>
+          ))}
         </div>
       ) : null}
     </div>

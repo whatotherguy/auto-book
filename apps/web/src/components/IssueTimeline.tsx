@@ -24,6 +24,7 @@ export function IssueTimeline({
   playheadMs = 0,
   audioSignals = [],
   vadSegments = [],
+  enabledTypes = "all",
 }: {
   issues: Issue[]
   selectedIssueId: number | null
@@ -32,7 +33,9 @@ export function IssueTimeline({
   playheadMs?: number
   audioSignals?: AudioSignalRecord[]
   vadSegments?: VadSegmentRecord[]
+  enabledTypes?: Set<string> | "all"
 }) {
+  const filteredIssues = enabledTypes === "all" ? issues : issues.filter((i) => enabledTypes.has(i.type))
   const safeDurationMs = Math.max(
     durationMs,
     issues.reduce((max, issue) => Math.max(max, issue.end_ms, issue.start_ms + 1), 1)
@@ -46,7 +49,7 @@ export function IssueTimeline({
       storageKey="chapter-review:timeline"
       actions={
         <div className="timeline-meta">
-          <span>{issues.length} issues</span>
+          <span>{filteredIssues.length} issues</span>
           <span>{formatTimelineLabel(safeDurationMs)}</span>
         </div>
       }
@@ -95,7 +98,7 @@ export function IssueTimeline({
             }
             return null
           })}
-          {issues.map((issue) => {
+          {filteredIssues.map((issue) => {
             const startPercent = Math.max(0, Math.min(100, (issue.start_ms / safeDurationMs) * 100))
             const endPercent = Math.max(startPercent, Math.min(100, (issue.end_ms / safeDurationMs) * 100))
             const widthPercent = Math.max(endPercent - startPercent, 0.35)

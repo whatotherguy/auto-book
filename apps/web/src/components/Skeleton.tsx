@@ -26,6 +26,32 @@ export function SkeletonIssueList({ count = 5 }: { count?: number }) {
   )
 }
 
+export function SkeletonListItem() {
+  return (
+    <div className="skeleton-list-item">
+      <div className="skeleton-list-item-main">
+        <SkeletonLine width="55%" />
+        <SkeletonLine width="35%" />
+      </div>
+      <div className="skeleton-list-item-badges">
+        <SkeletonLine width="48px" />
+        <SkeletonLine width="36px" />
+        <SkeletonLine width="56px" />
+      </div>
+    </div>
+  )
+}
+
+export function SkeletonListItems({ count = 4 }: { count?: number }) {
+  return (
+    <div className="skeleton-list">
+      {Array.from({ length: count }, (_, i) => (
+        <SkeletonListItem key={i} />
+      ))}
+    </div>
+  )
+}
+
 export function SkeletonTimeline() {
   return (
     <div className="skeleton-timeline">

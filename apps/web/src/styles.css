@@ -1421,14 +1421,14 @@ button:disabled {
 /* --- Sticky Waveform Panel --- */
 .waveform-sticky-panel {
   position: sticky;
-  top: 0;
+  top: 165px;
   z-index: 9;
   background: linear-gradient(180deg, rgba(8, 15, 30, 0.96), rgba(15, 23, 42, 0.92));
   backdrop-filter: blur(16px) saturate(1.5);
   -webkit-backdrop-filter: blur(16px) saturate(1.5);
   border: 1px solid rgba(103, 232, 249, 0.1);
-  border-radius: 0 0 16px 16px;
-  margin: -1px -2px 16px;
+  border-radius: 16px;
+  margin: 0 0 16px;
   padding: 8px 12px;
   box-shadow: 0 8px 24px rgba(2, 6, 23, 0.5);
 }
@@ -1651,6 +1651,14 @@ p {
 
   .review-grid-2col {
     grid-template-columns: 1fr;
+  }
+
+  .review-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .waveform-sticky-panel {
+    position: static;
   }
 
   .timeline-header {

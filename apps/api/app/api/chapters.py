@@ -90,9 +90,6 @@ def serialize_chapter(session: Session, chapter: Chapter) -> dict:
 def reset_chapter_audio_review_state(session: Session, chapter: Chapter) -> None:
     dirs = ensure_chapter_dirs(chapter.project_id, chapter.chapter_number)
 
-    for existing_wav in dirs["source"].glob("*.wav"):
-        existing_wav.unlink(missing_ok=True)
-
     clear_directory(dirs["working"])
     clear_directory(dirs["analysis"])
     clear_directory(dirs["exports"])
@@ -198,11 +195,16 @@ async def upload_audio(chapter_id: int, file: UploadFile = File(...), session: S
         temp_target.unlink(missing_ok=True)
         raise HTTPException(status_code=400, detail=str(exc)) from exc
 
-    # Reset only after validating the upload — avoids wiping state on bad files
-    reset_chapter_audio_review_state(session, chapter)
+    # Remove old source audio before moving the new file in.
+    for existing_wav in dirs["source"].glob("*.wav"):
+        existing_wav.unlink(missing_ok=True)
 
     target = dirs["source"] / filename
     shutil.move(str(temp_target), str(target))
+
+    # Reset derived state only after the new file is safely in place —
+    # avoids wiping state if the upload was bad.
+    reset_chapter_audio_review_state(session, chapter)
 
     chapter.audio_file_path = str(target.resolve())
     chapter.duration_ms = duration_ms

@@ -20,6 +20,7 @@ export function AltTakeComparison({
   const [playingId, setPlayingId] = useState<number | null>(null)
   const [saving, setSaving] = useState(false)
   const audioRef = useRef<HTMLAudioElement | null>(null)
+  const loadedUrlRef = useRef<string | null>(null)
   const listenersRef = useRef<{ timeupdate?: () => void; ended?: () => void }>({})
 
   const memberIssues = cluster.members
@@ -60,10 +61,9 @@ export function AltTakeComparison({
     if (listenersRef.current.timeupdate) audio.removeEventListener("timeupdate", listenersRef.current.timeupdate)
     if (listenersRef.current.ended) audio.removeEventListener("ended", listenersRef.current.ended)
 
-    audio.src = audioUrl
-    audio.currentTime = issue.start_ms / 1000
-
+    const startTime = issue.start_ms / 1000
     const endTime = issue.end_ms / 1000
+
     function onTimeUpdate() {
       if (audio.currentTime >= endTime) {
         audio.pause()
@@ -79,7 +79,19 @@ export function AltTakeComparison({
     audio.addEventListener("ended", onEnded)
 
     setPlayingId(issue.id)
-    void audio.play()
+
+    function startPlayback() {
+      audio.currentTime = startTime
+      void audio.play()
+    }
+
+    if (loadedUrlRef.current === audioUrl) {
+      startPlayback()
+    } else {
+      audio.src = audioUrl
+      loadedUrlRef.current = audioUrl
+      audio.addEventListener("loadedmetadata", startPlayback, { once: true })
+    }
   }
 
   async function handleSelect(issueId: number) {

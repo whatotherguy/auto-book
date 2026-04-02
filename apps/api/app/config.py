@@ -36,6 +36,30 @@ def load_env_file() -> None:
 load_env_file()
 
 
+def persist_to_env_file(key: str, value: str) -> None:
+    """Write or update a key=value pair in the .env file so it survives restarts."""
+    env_path = next((p for p in ENV_CANDIDATES if p.exists()), ENV_CANDIDATES[0])
+    env_path.parent.mkdir(parents=True, exist_ok=True)
+
+    lines: list[str] = env_path.read_text(encoding="utf-8").splitlines() if env_path.exists() else []
+
+    updated = False
+    for i, raw_line in enumerate(lines):
+        stripped = raw_line.strip()
+        if stripped.startswith("#") or "=" not in stripped:
+            continue
+        k = stripped.split("=", 1)[0].strip()
+        if k == key:
+            lines[i] = f"{key}={value}"
+            updated = True
+            break
+
+    if not updated:
+        lines.append(f"{key}={value}")
+
+    env_path.write_text("\n".join(lines) + "\n", encoding="utf-8")
+
+
 class Settings(BaseModel):
     app_name: str = os.getenv("APP_NAME", "Audiobook Editor API")
     app_env: str = os.getenv("APP_ENV", "development")

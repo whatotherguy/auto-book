@@ -198,6 +198,13 @@ def run_analysis(
                 if idx is not None and idx < len(issue_records):
                     member["issue_id"] = issue_records[idx].get("id")
 
+        # Resolve issue_ids in scoring envelopes — same problem: scoring runs before
+        # persistence, so build_envelope sets issue_id=None (from issue.get("id")).
+        for envelope in scoring_result.get("envelopes", []):
+            idx = envelope.get("issue_index")
+            if idx is not None and idx < len(issue_records):
+                envelope["issue_id"] = issue_records[idx].get("id")
+
         _persist_signal_data(session, chapter.id, audio_signals, vad_segments, alt_take_clusters, scoring_result)
 
         chapter.status = "review"

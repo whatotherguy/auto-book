@@ -717,15 +717,9 @@ export function ChapterReviewPage({
         loading={loading}
       />
 
-      {/* Detail + manuscript columns */}
-      <div className="grid review-grid-2col">
+      {/* Alt Takes / ACX / Settings | Issue Detail | Manuscript */}
+      <div className="grid review-grid">
         <div className="review-column">
-          <IssueDetail
-            issue={selectedIssue}
-            onStatusChange={handleIssueStatusChange}
-            onNoteUpdated={handleNoteUpdated}
-          />
-
           {altTakeClusters.length > 0 ? (
             <AltTakesPanel
               clusters={altTakeClusters}
@@ -747,6 +741,14 @@ export function ChapterReviewPage({
           />
 
           <SettingsPanel settings={appSettings} onUpdate={setAppSettings} />
+        </div>
+
+        <div className="review-column">
+          <IssueDetail
+            issue={selectedIssue}
+            onStatusChange={handleIssueStatusChange}
+            onNoteUpdated={handleNoteUpdated}
+          />
         </div>
 
         <div className="review-column">

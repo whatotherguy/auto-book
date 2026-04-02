@@ -6,7 +6,7 @@ but never returns the actual key values.
 from fastapi import APIRouter
 from pydantic import BaseModel
 
-from ..config import settings
+from ..config import persist_to_env_file, settings
 from ..services.gpu_thermal import get_gpu_thermal_status
 from ..services.transcribe import detect_gpu
 from ..services.transcribe_api import is_whisper_api_available
@@ -82,30 +82,34 @@ def get_settings() -> SettingsResponse:
 def update_settings(payload: SettingsUpdate) -> SettingsResponse:
     import os
 
+    def _apply(env_key: str, value: str) -> None:
+        os.environ[env_key] = value
+        persist_to_env_file(env_key, value)
+
     if payload.openai_api_key is not None:
         settings.openai_api_key = payload.openai_api_key
-        os.environ["OPENAI_API_KEY"] = payload.openai_api_key
+        _apply("OPENAI_API_KEY", payload.openai_api_key)
     if payload.anthropic_api_key is not None:
         settings.anthropic_api_key = payload.anthropic_api_key
-        os.environ["ANTHROPIC_API_KEY"] = payload.anthropic_api_key
+        _apply("ANTHROPIC_API_KEY", payload.anthropic_api_key)
     if payload.llm_provider is not None:
         settings.llm_provider = payload.llm_provider
-        os.environ["LLM_PROVIDER"] = payload.llm_provider
+        _apply("LLM_PROVIDER", payload.llm_provider)
     if payload.transcription_backend is not None:
         settings.transcription_backend = payload.transcription_backend
-        os.environ["TRANSCRIPTION_BACKEND"] = payload.transcription_backend
+        _apply("TRANSCRIPTION_BACKEND", payload.transcription_backend)
     if payload.gpu_thermal_protection is not None:
         settings.gpu_thermal_protection = payload.gpu_thermal_protection
-        os.environ["GPU_THERMAL_PROTECTION"] = "true" if payload.gpu_thermal_protection else "false"
+        _apply("GPU_THERMAL_PROTECTION", "true" if payload.gpu_thermal_protection else "false")
     if payload.gpu_temp_warning is not None:
         settings.gpu_temp_warning = payload.gpu_temp_warning
-        os.environ["GPU_TEMP_WARNING"] = str(payload.gpu_temp_warning)
+        _apply("GPU_TEMP_WARNING", str(payload.gpu_temp_warning))
     if payload.gpu_temp_critical is not None:
         settings.gpu_temp_critical = payload.gpu_temp_critical
-        os.environ["GPU_TEMP_CRITICAL"] = str(payload.gpu_temp_critical)
+        _apply("GPU_TEMP_CRITICAL", str(payload.gpu_temp_critical))
     if payload.gpu_cooldown_seconds is not None:
         settings.gpu_cooldown_seconds = payload.gpu_cooldown_seconds
-        os.environ["GPU_COOLDOWN_SECONDS"] = str(payload.gpu_cooldown_seconds)
+        _apply("GPU_COOLDOWN_SECONDS", str(payload.gpu_cooldown_seconds))
 
     return get_settings()
 

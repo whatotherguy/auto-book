@@ -48,6 +48,12 @@ class IssueUpdate(BaseModel):
         return self
 
 
+class IssueBatchUpdate(BaseModel):
+    issue_ids: list[int] = Field(min_length=1)
+    status: Optional[Literal["approved", "rejected", "needs_manual"]] = None
+    note: Optional[str] = None
+
+
 class AnalyzeResponse(BaseModel):
     job_id: int
     status: str

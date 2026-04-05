@@ -155,6 +155,24 @@ export function getIssues(chapterId: number) {
   return fetchJson<Issue[]>(`/chapters/${chapterId}/issues`)
 }
 
+export function getIssueStats(chapterId: number) {
+  return fetchJson<{
+    total: number
+    reviewed: number
+    by_status: Record<string, number>
+    by_type: Record<string, number>
+    by_confidence: { high: number; medium: number; low: number }
+  }>(`/chapters/${chapterId}/issues/stats`)
+}
+
+export function batchUpdateIssues(issueIds: number[], payload: { status?: Issue["status"]; note?: string }) {
+  return fetchJson<Issue[]>("/issues/batch-update", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ issue_ids: issueIds, ...payload }),
+  })
+}
+
 export function analyzeChapter(chapterId: number, transcriptionMode: TranscriptionMode, forceRetranscribe: boolean = false, enableLlmTriage: boolean = true) {
   return fetchJson<{ job_id: number; status: string }>(`/chapters/${chapterId}/analyze`, {
     method: "POST",

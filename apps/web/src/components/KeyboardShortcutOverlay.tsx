@@ -5,6 +5,7 @@ const SHORTCUTS = [
   { key: "K", description: "Previous issue" },
   { key: "A", description: "Approve current issue" },
   { key: "R", description: "Reject current issue" },
+  { key: "M", description: "Mark current issue for manual review" },
   { key: "Space", description: "Play / Pause audio" },
   { key: "?", description: "Toggle this help" },
 ]

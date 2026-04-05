@@ -7,6 +7,10 @@ from ..schemas import IssueBatchUpdate, IssueUpdate
 
 router = APIRouter(tags=["issues"])
 
+# Confidence band thresholds — must match the bands defined in AGENTS.md and the frontend utils.
+CONFIDENCE_HIGH_THRESHOLD = 0.85
+CONFIDENCE_MEDIUM_THRESHOLD = 0.65
+
 
 @router.get("/chapters/{chapter_id}/issues")
 def list_chapter_issues(chapter_id: int, session: Session = Depends(get_session)):
@@ -26,9 +30,9 @@ def get_chapter_issue_stats(chapter_id: int, session: Session = Depends(get_sess
     for issue in issues:
         status_counts[issue.status] = status_counts.get(issue.status, 0) + 1
         type_counts[issue.type] = type_counts.get(issue.type, 0) + 1
-        if issue.confidence >= 0.85:
+        if issue.confidence >= CONFIDENCE_HIGH_THRESHOLD:
             high += 1
-        elif issue.confidence >= 0.65:
+        elif issue.confidence >= CONFIDENCE_MEDIUM_THRESHOLD:
             medium += 1
         else:
             low += 1
@@ -46,9 +50,6 @@ def get_chapter_issue_stats(chapter_id: int, session: Session = Depends(get_sess
 @router.post("/issues/batch-update")
 def batch_update_issues(payload: IssueBatchUpdate, session: Session = Depends(get_session)):
     """Update status and/or note on multiple issues in a single request."""
-    if payload.status is None and payload.note is None:
-        raise HTTPException(status_code=422, detail="At least one of 'status' or 'note' must be provided")
-
     issues = session.exec(select(Issue).where(Issue.id.in_(payload.issue_ids))).all()  # type: ignore[attr-defined]
     found_ids = {issue.id for issue in issues}
     missing = [i for i in payload.issue_ids if i not in found_ids]

@@ -46,6 +46,11 @@ import { ConfidenceFilter, ISSUE_TYPE_META } from "../utils"
 import { cachedFetch, cacheInvalidate } from "../cache"
 
 const ONBOARDING_KEY = "ab:onboarding-shortcuts-dismissed"
+const ERROR_AUTO_DISMISS_MS = 8_000
+
+function isReviewedStatus(status: string): boolean {
+  return status === "approved" || status === "rejected"
+}
 
 export function ChapterReviewPage({
   chapterId,
@@ -120,7 +125,7 @@ export function ChapterReviewPage({
   useEffect(() => {
     if (error) {
       if (errorDismissTimerRef.current) clearTimeout(errorDismissTimerRef.current)
-      errorDismissTimerRef.current = setTimeout(() => setError(null), 8_000)
+      errorDismissTimerRef.current = setTimeout(() => setError(null), ERROR_AUTO_DISMISS_MS)
     }
     return () => {
       if (errorDismissTimerRef.current) clearTimeout(errorDismissTimerRef.current)
@@ -467,8 +472,8 @@ export function ChapterReviewPage({
           // Update review stats optimistically
           setIssueStats((prev) => {
             if (!prev) return prev
-            const alreadyReviewed = targetIssues.filter((i) => i.status === "approved" || i.status === "rejected").length
-            const newlyReviewed = status === "approved" || status === "rejected"
+            const alreadyReviewed = targetIssues.filter((i) => isReviewedStatus(i.status)).length
+            const newlyReviewed = isReviewedStatus(status)
               ? targetIssues.length - alreadyReviewed
               : -alreadyReviewed
             return { ...prev, reviewed: Math.max(0, prev.reviewed + newlyReviewed) }
@@ -496,10 +501,10 @@ export function ChapterReviewPage({
       // Update review progress stats optimistically
       setIssueStats((prev) => {
         if (!prev) return prev
-        const wasReviewed = previousStatus === "approved" || previousStatus === "rejected"
-        const isReviewed = status === "approved" || status === "rejected"
-        if (wasReviewed === isReviewed) return prev
-        return { ...prev, reviewed: prev.reviewed + (isReviewed ? 1 : -1) }
+        const wasReviewed = isReviewedStatus(previousStatus)
+        const nowReviewed = isReviewedStatus(status)
+        if (wasReviewed === nowReviewed) return prev
+        return { ...prev, reviewed: prev.reviewed + (nowReviewed ? 1 : -1) }
       })
 
       // Show undo toast
@@ -515,10 +520,10 @@ export function ChapterReviewPage({
             )
             setIssueStats((prev) => {
               if (!prev) return prev
-              const wasReviewed = status === "approved" || status === "rejected"
-              const isReviewed = previousStatus === "approved" || previousStatus === "rejected"
-              if (wasReviewed === isReviewed) return prev
-              return { ...prev, reviewed: prev.reviewed + (isReviewed ? 1 : -1) }
+              const wasReviewed = isReviewedStatus(status)
+              const nowReviewed = isReviewedStatus(previousStatus)
+              if (wasReviewed === nowReviewed) return prev
+              return { ...prev, reviewed: prev.reviewed + (nowReviewed ? 1 : -1) }
             })
           } catch {
             // Best effort

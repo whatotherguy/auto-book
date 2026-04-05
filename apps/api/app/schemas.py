@@ -53,6 +53,12 @@ class IssueBatchUpdate(BaseModel):
     status: Optional[Literal["approved", "rejected", "needs_manual"]] = None
     note: Optional[str] = None
 
+    @model_validator(mode="after")
+    def validate_at_least_one_field(self) -> "IssueBatchUpdate":
+        if self.status is None and self.note is None:
+            raise ValueError("At least one of 'status' or 'note' must be provided")
+        return self
+
 
 class AnalyzeResponse(BaseModel):
     job_id: int

@@ -284,11 +284,15 @@ def build_alignment(
         and len(spoken_values) <= WINDOW_SIZE
     ):
         matches = _align_single_pass(manuscript_values, spoken_values)
-        # Compute match_ratio via SequenceMatcher for short chapters
-        matcher = SequenceMatcher(
-            a=manuscript_values, b=spoken_values, autojunk=False,
+        # Compute match_ratio from the matches already in hand — avoids a
+        # redundant second SequenceMatcher construction.
+        equal_count = sum(
+            m["spoken_end"] - m["spoken_start"]
+            for m in matches
+            if m["op"] == "equal"
         )
-        match_ratio = round(matcher.ratio(), 4)
+        total = len(manuscript_values) + len(spoken_values)
+        match_ratio = round(2 * equal_count / total if total else 0.0, 4)
     else:
         matches = _build_windowed_alignment(
             manuscript_values, spoken_values,

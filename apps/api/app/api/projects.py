@@ -3,9 +3,10 @@ from sqlalchemy import func
 from sqlmodel import Session, delete, select
 
 from ..db import get_session
-from ..models import AnalysisJob, Chapter, Issue, Project
+from ..models import Chapter, Project
 from ..schemas import ProjectCreate
 from ..services.storage import delete_project_dirs
+from .chapters import delete_chapter_dependent_records
 
 router = APIRouter(prefix="/projects", tags=["projects"])
 
@@ -59,8 +60,8 @@ def delete_project(project_id: int, session: Session = Depends(get_session)):
     chapter_ids = session.exec(select(Chapter.id).where(Chapter.project_id == project_id)).all()
 
     if chapter_ids:
-        session.exec(delete(Issue).where(Issue.chapter_id.in_(chapter_ids)))
-        session.exec(delete(AnalysisJob).where(AnalysisJob.chapter_id.in_(chapter_ids)))
+        for chapter_id in chapter_ids:
+            delete_chapter_dependent_records(session, chapter_id)
         session.exec(delete(Chapter).where(Chapter.project_id == project_id))
 
     session.delete(project)

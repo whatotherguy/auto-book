@@ -121,13 +121,15 @@ def _find_anchor_in_values(values: Sequence[str], anchor: Sequence[str], referen
     if not anchor:
         return None
 
+    anchor_list = list(anchor)
+    n = len(anchor_list)
     start = max(0, reference_index - window)
-    end = min(len(values) - len(anchor), reference_index + window)
+    end = min(len(values) - n, reference_index + window)
     if end < start:
         return None
 
     for index in range(start, end + 1):
-        if list(values[index : index + len(anchor)]) == list(anchor):
+        if values[index : index + n] == anchor_list:
             return index
 
     return None
@@ -137,9 +139,11 @@ def _find_anchor_after_index(values: Sequence[str], anchor: Sequence[str], start
     if not anchor:
         return None
 
-    end = min(len(values) - len(anchor), start_index + lookahead)
+    anchor_list = list(anchor)
+    n = len(anchor_list)
+    end = min(len(values) - n, start_index + lookahead)
     for index in range(max(0, start_index), end + 1):
-        if list(values[index : index + len(anchor)]) == list(anchor):
+        if values[index : index + n] == anchor_list:
             return index
 
     return None

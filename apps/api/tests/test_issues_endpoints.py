@@ -1,6 +1,5 @@
 """Tests for the issue stats and batch-update endpoints."""
 
-import pytest
 from fastapi.testclient import TestClient
 from sqlmodel import Session, SQLModel, create_engine
 

@@ -307,7 +307,7 @@ export function ChapterReviewPage({
       if (event.key === "r" && !event.ctrlKey && !event.metaKey) {
         if (currentSelectedIssue) void handleIssueStatusChange(currentSelectedIssue, "rejected").catch(() => {})
       }
-      if (event.key === "m" || event.key === "M") {
+      if (event.key.toLowerCase() === "m" && !event.ctrlKey && !event.metaKey) {
         if (currentSelectedIssue) void handleIssueStatusChange(currentSelectedIssue, "needs_manual").catch(() => {})
       }
       if (event.key === " ") {

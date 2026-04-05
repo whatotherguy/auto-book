@@ -29,9 +29,9 @@ pipeline.py          ← main entry point: run_scoring_pipeline()
 | `envelope.py` | Build a time-ordered score envelope so nearby high-scoring issues can influence each other |
 | `detector_registry.py` | `run_all_detectors()` — iterates over all 15 registered detectors and collects `DetectorOutput` objects |
 | `detector_output.py` | `DetectorOutput` dataclass: `detector_name`, `score`, `confidence`, `reasons`, `features_used`, `triggered` |
-| `composite.py` | `compute_all_composites()` — 5 composite scores: `edit_urgency`, `audio_quality`, `text_accuracy`, `timing_confidence`, `overall` |
-| `take_ranking.py` | `rank_alternate_takes()` — sort alt-take clusters by `audio_quality` + `text_accuracy` composites |
-| `recommendations.py` | `generate_recommendation()` — maps composite scores to one of: `auto_cut`, `review`, `pickup`, `ok` |
+| `composite.py` | `compute_all_composites()` — 5 composite scores: `mistake_candidate`, `pickup_candidate`, `performance_quality`, `continuity_fit`, `splice_readiness` |
+| `take_ranking.py` | `rank_alternate_takes()` — sort alt-take clusters using the composite scores from `compute_all_composites()` |
+| `recommendations.py` | `generate_recommendation()` — maps composite scores to one of: `safe_auto_cut`, `review_mistake`, `likely_pickup`, `alt_take_available`, `no_action` |
 | [`detectors/`](detectors/) | 15 primitive detector functions grouped by signal domain |
 | [`calibration/`](calibration/) | Offline Monte Carlo weight tuning harness |
 

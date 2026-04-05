@@ -6,7 +6,7 @@ Core Python package for the Audiobook Editor backend.
 
 | Module / Package | Purpose |
 |-----------------|---------|
-| `main.py` | FastAPI application factory, CORS config, startup health checks |
+| `main.py` | FastAPI app definition / configuration, CORS config, startup health checks |
 | `config.py` | Environment-driven settings (Pydantic `Settings`) |
 | `db.py` | SQLite engine, session factory, `init_db()` |
 | `models.py` | SQLModel ORM models (`Project`, `Chapter`, `Issue`, `AnalysisJob`, `ScoringResult`, etc.) |

@@ -27,4 +27,4 @@ pages/*          ← route components, own the data-fetch lifecycle
        └─ types.ts / utils.ts  ← shared types and helpers
 ```
 
-Pages are responsible for fetching data and passing it down as props. Components do not call `api.ts` directly (with the exception of mutation-only components such as `IssueList`).
+Pages are responsible for fetching data and passing it down as props. Components are generally presentational, but some perform their own mutations directly (e.g. `IssueDetail` calls `updateIssue`, `SettingsPanel` calls `updateSettings` / `getGpuStatus`).

@@ -26,20 +26,21 @@ The primitive detectors use configurable weights and thresholds. The calibration
 
 ```
 1. Prepare labelled data
-   └─ Place labels.json files in data/calibration/<dataset-name>/
+   └─ Place labels.json files in apps/api/app/data/calibration/<dataset-name>/
 
 2. Load dataset
-   harness.load_dataset(path)         # real hand labels
-   harness.generate_synthetic_dataset(n=500)  # or synthetic augmentation
+   harness.load_dataset(path)                   # real hand labels
+   harness.generate_synthetic_dataset(n=500)    # or synthetic augmentation
 
-3. Run sweep
-   result = harness.run_blitz(strategy="monte_carlo", n_configs=1000)
+3. Run sweep via API
+   POST /calibration/sweep  { "dataset_name": "<name>", "iterations": 1000 }
+   └─ The best weights are auto-saved as a CalibrationProfile
 
-4. Inspect results
-   harness.export(output_dir)         # writes report + best config
+4. Activate a profile
+   PATCH /calibration/profiles/{profile_id}/set-default
 
-5. Promote to database
-   POST /calibration/promote  { "profile_id": <id> }
+5. Or export locally
+   harness.export(output_dir)   # writes report + best config JSON
 ```
 
 ## Label format

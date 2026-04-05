@@ -6,7 +6,7 @@ Alembic database migration scripts. Each file is an incremental revision that ev
 
 | Revision | File | Description |
 |----------|------|-------------|
-| `f0a1c2b3d4e5` | `f0a1c2b3d4e5_initial_schema.py` | Initial schema — `project`, `chapter`, `issue`, `analysisJob` tables |
+| `f0a1c2b3d4e5` | `f0a1c2b3d4e5_initial_schema.py` | Initial schema — `project`, `chapter`, `issue`, `analysisjob` tables |
 | `a1b2c3d4e5f6` | `a1b2c3d4e5f6_add_signal_scoring_tables.py` | Add `audiosignal`, `vadsegment`, `alttakecluster`, `alttakemember`, `scoringresult`, `calibrationprofile` tables; extend `issue` with signal/scoring columns |
 | `b2c3d4e5f6a7` | `b2c3d4e5f6a7_add_triage_columns.py` | Add `triage_label`, `triage_confidence`, `triage_note` columns to `issue` |
 

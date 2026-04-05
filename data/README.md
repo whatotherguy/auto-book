@@ -16,13 +16,17 @@ data/
                 ├── source/      ← original uploaded WAV (never modified)
                 ├── working/     ← normalised working copy used for analysis
                 ├── analysis/    ← intermediate artifacts (JSON)
-                │   ├── transcript.json
-                │   ├── aligned_tokens.json
+                │   ├── manuscript_tokens.json
+                │   ├── transcript.raw.json
+                │   ├── spoken_tokens.json
+                │   ├── alignment.json
                 │   ├── audio_signals.json
                 │   ├── vad_segments.json
-                │   ├── prosody.json
-                │   ├── issues_raw.json
-                │   └── scoring_results.json
+                │   ├── prosody_features.json
+                │   ├── alt_take_clusters.json
+                │   ├── scoring_result.json
+                │   ├── issues.json
+                │   └── acx_report.json      ← written by the ACX endpoint
                 └── exports/     ← generated CSV, JSON, and WAV exports
 ```
 

@@ -18,7 +18,7 @@ Individual service modules that implement each analysis step. Each module is a c
 | `transcribe_api.py` | Thin HTTP wrapper for calling an external transcription service (optional) |
 | `text_normalize.py` | Manuscript text cleaning: strip punctuation, expand contractions, lowercase |
 | `manuscript.py` | Parse manuscript file, split into chapters, extract clean tokens |
-| `align.py` | Diff-based alignment of transcript tokens against manuscript tokens; produces `AlignedToken` list |
+| `align.py` | Diff-based alignment of transcript tokens against manuscript tokens; `build_alignment(...)` returns a dict with token lists, `matches` opcodes, and `match_ratio` |
 
 ### Audio signal analysis
 | File | Description |
@@ -31,7 +31,7 @@ Individual service modules that implement each analysis step. Each module is a c
 ### Issue detection
 | File | Description |
 |------|-------------|
-| `detect.py` | Heuristic detectors for the 7 issue types (`false_start`, `repetition`, `pickup_restart`, `substitution`, `missing_text`, `long_pause`, `uncertain_alignment`); calls into `scoring/` for enriched signals |
+| `detect.py` | Heuristic detectors for the 7 issue types (`false_start`, `repetition`, `pickup_restart`, `substitution`, `missing_text`, `long_pause`, `uncertain_alignment`) |
 | `alt_takes.py` | Cluster overlapping time ranges into alternate-take groups; rank takes by quality |
 
 ### Scoring & recommendations

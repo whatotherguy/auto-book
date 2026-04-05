@@ -7,7 +7,7 @@ Small, dependency-free helpers shared across the backend.
 | File | Description |
 |------|-------------|
 | `timecode.py` | `ms_to_timecode(ms: int) -> str` — convert a millisecond offset to `HH:MM:SS.mmm` format for display and export |
-| `tokenization.py` | `tokenize(text)`, `build_text_token_records(text)` — whitespace-split tokenisation and `TokenRecord` TypedDict construction used by the alignment pipeline |
+| `tokenization.py` | `tokenize(text)`, `build_text_token_records(text)` — whitespace-split tokenisation plus `TokenRecord` TypedDict construction helpers |
 
 ## Notes
 

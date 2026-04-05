@@ -9,10 +9,10 @@ The 15 primitive detector functions. Each detector receives a `features` dict an
 | File | Detectors inside | Signal domain |
 |------|-----------------|---------------|
 | `audio.py` | `detect_click_transient`, `detect_clipping`, `detect_room_tone_shift`, `detect_punch_in_boundary` | Raw audio signal anomalies |
-| `timing.py` | `detect_long_pause`, `detect_rush`, `detect_timing_irregularity` | Token-level timing / pace |
-| `text.py` | `detect_text_mismatch`, `detect_repetition`, `detect_missing_text` | Transcript ↔ manuscript alignment |
-| `prosody.py` | `detect_pitch_anomaly`, `detect_energy_drop`, `detect_speech_rate_anomaly` | Pitch (F0), energy, and speech-rate signals |
-| `context.py` | `detect_false_start`, `detect_pickup_restart` | Sequential-context patterns (surrounding tokens) |
+| `timing.py` | `detect_abnormal_pause`, `detect_restart_gap`, `detect_rushed_delivery` | Token-level timing / pace |
+| `text.py` | `detect_text_mismatch`, `detect_repeated_phrase`, `detect_skipped_text` | Transcript ↔ manuscript alignment |
+| `prosody.py` | `detect_flat_delivery`, `detect_weak_landing`, `detect_cadence_drift` | Pitch (F0), energy, and speech-rate signals |
+| `context.py` | `detect_pickup_pattern`, `detect_continuity_mismatch` | Sequential-context patterns (surrounding tokens) |
 
 ## Detector contract
 

@@ -50,6 +50,7 @@ def get_chapter_issue_stats(chapter_id: int, session: Session = Depends(get_sess
 @router.post("/issues/batch-update")
 def batch_update_issues(payload: IssueBatchUpdate, session: Session = Depends(get_session)):
     """Update status and/or note on multiple issues in a single request."""
+    # SQLModel's Column type stubs don't expose `.in_()` directly; the method exists at runtime via SQLAlchemy.
     issues = session.exec(select(Issue).where(Issue.id.in_(payload.issue_ids))).all()  # type: ignore[attr-defined]
     found_ids = {issue.id for issue in issues}
     missing = [i for i in payload.issue_ids if i not in found_ids]

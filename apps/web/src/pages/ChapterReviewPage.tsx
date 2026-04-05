@@ -770,7 +770,7 @@ export function ChapterReviewPage({
               {isBatchUpdating && batchProgress ? `Updating ${batchProgress.done}/${batchProgress.total}…` : "Approve Filtered"}
             </button>
             <button type="button" className="reject-button" onClick={() => void handleBatchStatusChange("rejected", { enabledTypes, confidence: confidenceFilter, search: searchQuery })} disabled={isBatchUpdating || issues.length === 0}>
-              Reject Filtered
+              {isBatchUpdating && batchProgress ? `Updating ${batchProgress.done}/${batchProgress.total}…` : "Reject Filtered"}
             </button>
             {issueStats && issueStats.total > 0 ? (
               <span className="muted" style={{ fontSize: "0.8rem", alignSelf: "center" }}>

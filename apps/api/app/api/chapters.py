@@ -87,6 +87,39 @@ def serialize_chapter(session: Session, chapter: Chapter) -> dict:
     return payload
 
 
+def delete_chapter_dependent_records(session: Session, chapter_id: int) -> None:
+    """Delete all analysis-derived records for a chapter in FK-safe order.
+
+    The Issue ↔ AltTakeCluster relationship is circular (each holds a nullable
+    FK to the other), so we must null out ``AltTakeCluster.preferred_issue_id``
+    before deleting ``Issue`` rows to avoid a foreign-key violation.
+    """
+    # ScoringResult references Issue — delete first.
+    session.exec(delete(ScoringResult).where(ScoringResult.chapter_id == chapter_id))
+
+    # AltTakeMember references both AltTakeCluster and Issue — delete before either.
+    cluster_ids = session.exec(
+        select(AltTakeCluster.id).where(AltTakeCluster.chapter_id == chapter_id)
+    ).all()
+    if cluster_ids:
+        session.exec(delete(AltTakeMember).where(AltTakeMember.cluster_id.in_(cluster_ids)))
+
+        # Break the circular FK: null out the reference from AltTakeCluster → Issue
+        # so we can safely delete Issue rows below.
+        for cluster in session.exec(
+            select(AltTakeCluster).where(AltTakeCluster.chapter_id == chapter_id)
+        ).all():
+            if cluster.preferred_issue_id is not None:
+                cluster.preferred_issue_id = None
+                session.add(cluster)
+
+    session.exec(delete(Issue).where(Issue.chapter_id == chapter_id))
+    session.exec(delete(AltTakeCluster).where(AltTakeCluster.chapter_id == chapter_id))
+    session.exec(delete(AudioSignal).where(AudioSignal.chapter_id == chapter_id))
+    session.exec(delete(VadSegment).where(VadSegment.chapter_id == chapter_id))
+    session.exec(delete(AnalysisJob).where(AnalysisJob.chapter_id == chapter_id))
+
+
 def reset_chapter_audio_review_state(session: Session, chapter: Chapter) -> None:
     dirs = ensure_chapter_dirs(chapter.project_id, chapter.chapter_number)
 
@@ -94,8 +127,7 @@ def reset_chapter_audio_review_state(session: Session, chapter: Chapter) -> None
     clear_directory(dirs["analysis"])
     clear_directory(dirs["exports"])
 
-    session.exec(delete(Issue).where(Issue.chapter_id == chapter.id))
-    session.exec(delete(AnalysisJob).where(AnalysisJob.chapter_id == chapter.id))
+    delete_chapter_dependent_records(session, chapter.id)
 
     chapter.normalized_text = ""
     chapter.status = "new"
@@ -157,8 +189,7 @@ def delete_chapter(chapter_id: int, session: Session = Depends(get_session)):
     project_id = chapter.project_id
     chapter_number = chapter.chapter_number
 
-    session.exec(delete(Issue).where(Issue.chapter_id == chapter_id))
-    session.exec(delete(AnalysisJob).where(AnalysisJob.chapter_id == chapter_id))
+    delete_chapter_dependent_records(session, chapter_id)
     session.delete(chapter)
     session.commit()
 
@@ -368,20 +399,23 @@ def get_alt_take_clusters(chapter_id: int, session: Session = Depends(get_sessio
     clusters = session.exec(
         select(AltTakeCluster).where(AltTakeCluster.chapter_id == chapter_id)
     ).all()
+    if not clusters:
+        return []
+
+    # Batch-load all members for these clusters in one query instead of N queries.
+    cluster_ids = [c.id for c in clusters]
+    all_members = session.exec(
+        select(AltTakeMember).where(AltTakeMember.cluster_id.in_(cluster_ids))
+    ).all()
+    members_by_cluster: dict[int, list] = {c.id: [] for c in clusters}
+    for m in all_members:
+        members_by_cluster[m.cluster_id].append(m.model_dump())
+
     result = []
     for cluster in clusters:
-        members = session.exec(
-            select(AltTakeMember).where(AltTakeMember.cluster_id == cluster.id)
-        ).all()
         cluster_dict = cluster.model_dump()
-        cluster_dict["members"] = [m.model_dump() for m in members]
-
-        # Load ranking from scoring_result artifact if available
-        scoring_results = session.exec(
-            select(ScoringResult).where(ScoringResult.chapter_id == chapter_id)
-        ).all()
+        cluster_dict["members"] = members_by_cluster.get(cluster.id, [])
         cluster_dict["ranking"] = None
-
         result.append(cluster_dict)
     return result
 

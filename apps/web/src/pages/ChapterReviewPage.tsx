@@ -1,11 +1,13 @@
 import { ChangeEvent, useCallback, useEffect, useMemo, useRef, useState } from "react"
 import {
   analyzeChapter,
+  batchUpdateIssues,
   cancelJob,
   getAcxCheck,
   getAltTakeClusters,
   getAudioSignals,
   getHealth,
+  getIssueStats,
   getLatestAnalysisJob,
   getJob,
   getSettings,
@@ -44,6 +46,11 @@ import { ConfidenceFilter, ISSUE_TYPE_META } from "../utils"
 import { cachedFetch, cacheInvalidate } from "../cache"
 
 const ONBOARDING_KEY = "ab:onboarding-shortcuts-dismissed"
+const ERROR_AUTO_DISMISS_MS = 8_000
+
+function isReviewedStatus(status: string): boolean {
+  return status === "approved" || status === "rejected"
+}
 
 export function ChapterReviewPage({
   chapterId,
@@ -77,6 +84,8 @@ export function ChapterReviewPage({
   const [autoEditJob, setAutoEditJob] = useState<AnalysisJob | null>(null)
   const [uploadProgress, setUploadProgress] = useState<number | null>(null)
   const [isBatchUpdating, setIsBatchUpdating] = useState(false)
+  const [batchProgress, setBatchProgress] = useState<{ done: number; total: number } | null>(null)
+  const [issueStats, setIssueStats] = useState<{ total: number; reviewed: number } | null>(null)
   const [transcriptionMode, setTranscriptionMode] = useState<TranscriptionMode>("optimized")
   const [forceRetranscribe, setForceRetranscribe] = useState(false)
   const [gpuInfo, setGpuInfo] = useState<GpuInfo | null>(null)
@@ -105,11 +114,23 @@ export function ChapterReviewPage({
   const autoEditDownloadTriggeredRef = useRef(false)
   const issuesRef = useRef(issues)
   const selectedIssueRef = useRef<Issue | null>(null)
+  const errorDismissTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
 
   const selectedIssue = useMemo(
     () => issues.find((issue) => issue.id === selectedIssueId) ?? null,
     [issues, selectedIssueId]
   )
+
+  // Auto-dismiss error messages after 8 seconds
+  useEffect(() => {
+    if (error) {
+      if (errorDismissTimerRef.current) clearTimeout(errorDismissTimerRef.current)
+      errorDismissTimerRef.current = setTimeout(() => setError(null), ERROR_AUTO_DISMISS_MS)
+    }
+    return () => {
+      if (errorDismissTimerRef.current) clearTimeout(errorDismissTimerRef.current)
+    }
+  }, [error])
 
   useEffect(() => {
     void cachedFetch("health", getHealth, 60_000).then((h) => setGpuInfo(h.gpu)).catch(() => {})
@@ -147,6 +168,7 @@ export function ChapterReviewPage({
       getAudioSignals(chapterId).then(setAudioSignals).catch(() => setAudioSignals([]))
       getVadSegments(chapterId).then(setVadSegments).catch(() => setVadSegments([]))
       getAltTakeClusters(chapterId).then(setAltTakeClusters).catch(() => setAltTakeClusters([]))
+      getIssueStats(chapterId).then((s) => setIssueStats({ total: s.total, reviewed: s.reviewed })).catch(() => {})
 
       setChapter(nextChapter)
       setTranscriptionMode((currentMode) => {
@@ -284,6 +306,9 @@ export function ChapterReviewPage({
       }
       if (event.key === "r" && !event.ctrlKey && !event.metaKey) {
         if (currentSelectedIssue) void handleIssueStatusChange(currentSelectedIssue, "rejected").catch(() => {})
+      }
+      if (event.key.toLowerCase() === "m" && !event.ctrlKey && !event.metaKey) {
+        if (currentSelectedIssue) void handleIssueStatusChange(currentSelectedIssue, "needs_manual").catch(() => {})
       }
       if (event.key === " ") {
         event.preventDefault()
@@ -436,16 +461,28 @@ export function ChapterReviewPage({
         closeConfirm()
         try {
           setIsBatchUpdating(true)
+          setBatchProgress({ done: 0, total: targetIssues.length })
           setError(null)
-          const updated = await Promise.all(targetIssues.map((issue) => updateIssue(issue.id, { status })))
+          const updated = await batchUpdateIssues(targetIssues.map((i) => i.id), { status })
+          setBatchProgress({ done: targetIssues.length, total: targetIssues.length })
           setIssues((current) => {
             const updatedMap = new Map(updated.map((u) => [u.id, u]))
             return current.map((issue) => updatedMap.get(issue.id) ?? issue)
+          })
+          // Update review stats optimistically
+          setIssueStats((prev) => {
+            if (!prev) return prev
+            const alreadyReviewed = targetIssues.filter((i) => isReviewedStatus(i.status)).length
+            const newlyReviewed = isReviewedStatus(status)
+              ? targetIssues.length - alreadyReviewed
+              : -alreadyReviewed
+            return { ...prev, reviewed: Math.max(0, prev.reviewed + newlyReviewed) }
           })
         } catch (nextError) {
           setError(nextError instanceof Error ? nextError.message : "Failed to batch update issues.")
         } finally {
           setIsBatchUpdating(false)
+          setBatchProgress(null)
         }
       },
     })
@@ -461,6 +498,15 @@ export function ChapterReviewPage({
       )
       setSelectedIssueId(updatedIssue.id)
 
+      // Update review progress stats optimistically
+      setIssueStats((prev) => {
+        if (!prev) return prev
+        const wasReviewed = isReviewedStatus(previousStatus)
+        const nowReviewed = isReviewedStatus(status)
+        if (wasReviewed === nowReviewed) return prev
+        return { ...prev, reviewed: prev.reviewed + (nowReviewed ? 1 : -1) }
+      })
+
       // Show undo toast
       const label = status === "approved" ? "Approved" : status === "rejected" ? "Rejected" : "Marked for review"
       setUndoToast({
@@ -472,6 +518,13 @@ export function ChapterReviewPage({
             setIssues((currentIssues) =>
               currentIssues.map((ci) => (ci.id === reverted.id ? reverted : ci))
             )
+            setIssueStats((prev) => {
+              if (!prev) return prev
+              const wasReviewed = isReviewedStatus(status)
+              const nowReviewed = isReviewedStatus(previousStatus)
+              if (wasReviewed === nowReviewed) return prev
+              return { ...prev, reviewed: prev.reviewed + (nowReviewed ? 1 : -1) }
+            })
           } catch {
             // Best effort
           }
@@ -534,8 +587,9 @@ export function ChapterReviewPage({
       </div>
 
       {error ? (
-        <div className="card error" role="alert">
-          {error}
+        <div className="card error" role="alert" style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", gap: 12 }}>
+          <span>{error}</span>
+          <button type="button" className="onboarding-hint-dismiss" onClick={() => setError(null)} aria-label="Dismiss error">✕</button>
         </div>
       ) : null}
 
@@ -543,7 +597,7 @@ export function ChapterReviewPage({
       {showOnboarding && !loading && issues.length > 0 ? (
         <div className="onboarding-hint">
           <span>
-            Navigate issues with <kbd>J</kbd> / <kbd>K</kbd>, approve with <kbd>A</kbd>, reject with <kbd>R</kbd>, play/pause with <kbd>Space</kbd>
+            Navigate with <kbd>J</kbd> / <kbd>K</kbd>, approve <kbd>A</kbd>, reject <kbd>R</kbd>, manual <kbd>M</kbd>, play/pause <kbd>Space</kbd>
           </span>
           <button type="button" className="onboarding-hint-dismiss" onClick={dismissOnboarding}>
             Dismiss
@@ -713,11 +767,16 @@ export function ChapterReviewPage({
 
           <div className="action-group">
             <button type="button" className="approve-button" onClick={() => void handleBatchStatusChange("approved", { enabledTypes, confidence: confidenceFilter, search: searchQuery })} disabled={isBatchUpdating || issues.length === 0}>
-              {isBatchUpdating ? "..." : "Approve Filtered"}
+              {isBatchUpdating && batchProgress ? `Updating ${batchProgress.done}/${batchProgress.total}…` : "Approve Filtered"}
             </button>
             <button type="button" className="reject-button" onClick={() => void handleBatchStatusChange("rejected", { enabledTypes, confidence: confidenceFilter, search: searchQuery })} disabled={isBatchUpdating || issues.length === 0}>
-              Reject Filtered
+              {isBatchUpdating && batchProgress ? `Updating ${batchProgress.done}/${batchProgress.total}…` : "Reject Filtered"}
             </button>
+            {issueStats && issueStats.total > 0 ? (
+              <span className="muted" style={{ fontSize: "0.8rem", alignSelf: "center" }}>
+                {issueStats.reviewed}/{issueStats.total} reviewed
+              </span>
+            ) : null}
           </div>
         </div>
       </div>

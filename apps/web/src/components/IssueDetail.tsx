@@ -63,13 +63,17 @@ function NoteEditor({ issue, onSaved }: { issue: Issue; onSaved: (updated: Issue
   const [editing, setEditing] = useState(false)
   const [draft, setDraft] = useState(issue.note ?? "")
   const [saving, setSaving] = useState(false)
+  const [saveError, setSaveError] = useState<string | null>(null)
 
   async function handleSave() {
     try {
       setSaving(true)
+      setSaveError(null)
       const updated = await updateIssue(issue.id, { note: draft.trim() || undefined })
       onSaved(updated)
       setEditing(false)
+    } catch (err) {
+      setSaveError(err instanceof Error ? err.message : "Failed to save note.")
     } finally {
       setSaving(false)
     }
@@ -85,11 +89,12 @@ function NoteEditor({ issue, onSaved }: { issue: Issue; onSaved: (updated: Issue
           placeholder="Add a note about this issue..."
           rows={3}
         />
+        {saveError ? <p className="muted" style={{ color: "var(--color-error, #f87171)", margin: "4px 0 0" }}>{saveError}</p> : null}
         <div className="note-editor-actions">
           <button type="button" className="approve-button" onClick={() => void handleSave()} disabled={saving}>
             {saving ? "Saving..." : "Save Note"}
           </button>
-          <button type="button" onClick={() => { setEditing(false); setDraft(issue.note ?? "") }}>
+          <button type="button" onClick={() => { setEditing(false); setDraft(issue.note ?? ""); setSaveError(null) }}>
             Cancel
           </button>
         </div>

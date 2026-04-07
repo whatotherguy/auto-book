@@ -105,11 +105,13 @@ def _timed(text: str) -> list[dict]:
 
 def test_detect_alignment_issues_boosted_confidence_with_flanking_equals():
     """A 5-token delete flanked by equal ops must receive boosted confidence (0.88)."""
+    # manuscript: alpha beta gamma delta epsilon zeta eta theta  (8 tokens, indices 0-7)
+    # spoken:     alpha beta theta                               (3 tokens, indices 0-2)
+    # Narrator skipped "gamma delta epsilon zeta eta" (5 tokens) → delete is flanked by
+    # equal(alpha beta) on the left and equal(theta) on the right, triggering the boost.
     manuscript_tokens = _timed("alpha beta gamma delta epsilon zeta eta theta")
-    spoken_tokens = _timed("alpha beta eta theta")
+    spoken_tokens = _timed("alpha beta theta")
 
-    # Alignment: equal(alpha beta) + delete(gamma delta epsilon zeta eta?) …
-    # Let's build a precise alignment dict with the flanking pattern.
     matches = [
         {
             "op": "equal",

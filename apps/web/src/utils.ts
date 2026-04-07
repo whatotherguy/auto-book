@@ -95,9 +95,10 @@ export function getEditorStatusLabel(status: string): string {
 
 /**
  * Translate model_action to editor-facing recommendation label
+ * @param model_action - The model action value from Issue.model_action (snake_case field)
  */
-export function getEditorRecommendation(modelAction: string | null | undefined): string {
-  switch (modelAction) {
+export function getEditorRecommendation(model_action: string | null | undefined): string {
+  switch (model_action) {
     case "safe_cut":
       return "Recommended: Cut"
     case "ignore":

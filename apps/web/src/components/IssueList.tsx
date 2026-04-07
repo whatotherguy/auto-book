@@ -161,18 +161,7 @@ export function IssueList({
                     <span className="pill">{getEditorStatusLabel(issue.status)}</span>
                   </div>
 
-                  {/* Editor recommendation based on model action */}
-                  {issue.model_action ? (
-                    <div className="issue-card-meta">
-                      <span className="issue-recommendation-badge">{getEditorRecommendation(issue.model_action)}</span>
-                    </div>
-                  ) : issue.triage_verdict ? (
-                    <div className="issue-card-meta">
-                      <span className={`issue-triage-badge ${issue.triage_verdict}`} title={issue.triage_reason ?? ""}>
-                        {issue.triage_verdict === "dismiss" ? "AI: Likely OK" : issue.triage_verdict === "keep" ? "AI: Review" : "AI: Unclear"}
-                      </span>
-                    </div>
-                  ) : null}
+                  <IssueRecommendationBadge issue={issue} />
 
                   <div className="issue-card-text">
                     <span className="issue-card-field">
@@ -251,4 +240,43 @@ function renderHighlightedText(value: string, search: string) {
   }
 
   return parts.length > 0 ? parts : value
+}
+
+/**
+ * Renders the recommendation badge for an issue card.
+ * Shows model recommendation if available, otherwise falls back to triage verdict.
+ */
+function IssueRecommendationBadge({ issue }: { issue: Issue }) {
+  // Prefer model_action recommendation over triage_verdict
+  if (issue.model_action) {
+    const recommendationLabel = getEditorRecommendation(issue.model_action)
+    if (recommendationLabel) {
+      return (
+        <div className="issue-card-meta">
+          <span className="issue-recommendation-badge">{recommendationLabel}</span>
+        </div>
+      )
+    }
+  }
+
+  // Fall back to triage verdict if no model action
+  if (issue.triage_verdict) {
+    const triageLabel =
+      issue.triage_verdict === "dismiss" ? "AI: Likely OK" :
+      issue.triage_verdict === "keep" ? "AI: Review" :
+      "AI: Unclear"
+
+    return (
+      <div className="issue-card-meta">
+        <span
+          className={`issue-triage-badge ${issue.triage_verdict}`}
+          title={issue.triage_reason ?? ""}
+        >
+          {triageLabel}
+        </span>
+      </div>
+    )
+  }
+
+  return null
 }

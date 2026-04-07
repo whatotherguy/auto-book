@@ -52,6 +52,13 @@ PICKUP_CLICK_PROXIMITY_MS = 2000
 NON_SPEECH_MARKER_CONFIDENCE = 0.90
 PICKUP_CANDIDATE_BASE_CONFIDENCE = 0.40
 
+# === Corroboration-First Thresholds ===
+# Pickup candidates use stricter promotion thresholds before becoming primary issues.
+# Tightened thresholds reduce false positives from pure audio signals.
+PICKUP_CANDIDATE_MIN_CONFIDENCE_FOR_PRIMARY = 0.75  # Raised from effective ~0.65
+PICKUP_CANDIDATE_SILENCE_BOOST_MS = 800  # Silence must be longer for confidence boost
+NON_SPEECH_MARKER_IS_SECONDARY = True  # Non-speech markers are secondary by default
+
 # === Alt-Take Clustering ===
 ALT_TAKE_MAX_GAP_MS = 15000
 ALT_TAKE_MIN_TEXT_OVERLAP = 0.6

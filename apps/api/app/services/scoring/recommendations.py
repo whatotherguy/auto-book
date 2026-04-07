@@ -12,6 +12,8 @@ _ACTION_TO_MODEL_ACTION = {
     "review_mistake": "review",
     "manual_review_required": "review",
     "no_action": "ignore",
+    # NEW: Secondary issues get lower visibility
+    "secondary_signal": "ignore",
 }
 
 
@@ -24,8 +26,51 @@ def generate_recommendation(
     composite_scores: dict[str, Any],
     alt_take_cluster_id: int | None = None,
     alt_take_member_count: int = 0,
+    is_secondary: bool = False,
+    issue_type: str | None = None,
 ) -> dict[str, Any]:
-    """Generate an editorial recommendation from composite scores."""
+    """Generate an editorial recommendation from composite scores.
+    
+    CORROBORATION-FIRST LOGIC:
+    - Secondary issues (is_secondary=True) are demoted to low priority
+    - This prevents pure signal artifacts from cluttering the editor's view
+    - Secondary issues remain available for debugging and specialized review
+    
+    Priority order for PRIMARY issues:
+    1. Splice readiness (safe auto-cut)
+    2. Alt-take clusters
+    3. Pickup candidates (with text/signal corroboration)
+    4. Mistake candidates (text mismatch, repetition)
+    5. Ambiguous multi-signal cases
+    
+    SECONDARY issues get "secondary_signal" action and "info" priority.
+    """
+    # CORROBORATION-FIRST: Handle secondary issues early
+    # Secondary issues are available but have lower visibility
+    if is_secondary:
+        # Build appropriate reasoning based on issue type
+        if issue_type == "non_speech_marker":
+            reasoning_text = (
+                f"Secondary {issue_type} issue. "
+                "Non-speech markers are low-priority by default configuration. "
+                "Available for specialized review but not prioritized."
+            )
+        else:
+            reasoning_text = (
+                f"Secondary {issue_type or 'signal'} issue. "
+                "Pure audio signal without corroborating evidence or below confidence threshold. "
+                "Available for specialized review but not prioritized."
+            )
+        
+        return _make_recommendation(
+            action="secondary_signal",
+            priority="info",
+            reasoning=reasoning_text,
+            confidence=0.5,
+            ambiguity=[],
+            is_secondary=True,
+        )
+    
     mistake = composite_scores.get("mistake_candidate", {})
     pickup = composite_scores.get("pickup_candidate", {})
     splice = composite_scores.get("splice_readiness", {})
@@ -114,6 +159,7 @@ def _make_recommendation(
     confidence: float,
     ambiguity: list[str] | None = None,
     related_issue_ids: list[int] | None = None,
+    is_secondary: bool = False,
 ) -> dict[str, Any]:
     return {
         "action": action,
@@ -124,4 +170,6 @@ def _make_recommendation(
         "confidence": round(confidence, 4),
         "related_issue_ids": related_issue_ids or [],
         "ambiguity_flags": ambiguity or [],
+        # NEW: Expose is_secondary for downstream filtering
+        "is_secondary": is_secondary,
     }

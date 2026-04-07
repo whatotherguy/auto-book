@@ -114,11 +114,18 @@ def run_scoring_pipeline(
             alt_cluster_id = alt_info[0].get("id")
             alt_member_count = alt_info[1]
 
+        # CORROBORATION-FIRST: Pass is_secondary flag to recommendation generator
+        # Secondary issues (pure signal artifacts) get lower priority
+        is_secondary = issue.get("is_secondary", False)
+        issue_type = issue.get("type")
+
         # Generate recommendation
         recommendation = generate_recommendation(
             composite_scores,
             alt_take_cluster_id=alt_cluster_id,
             alt_take_member_count=alt_member_count,
+            is_secondary=is_secondary,
+            issue_type=issue_type,
         )
 
         # Build envelope

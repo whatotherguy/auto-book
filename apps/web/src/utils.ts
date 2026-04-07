@@ -172,7 +172,7 @@ export const BUCKET_ORDER: UIBucket[] = [
  * 6. No model_action + confidence < 0.65 → Low-Priority Markers
  * 7. Default (no model_action, confidence ≥ 0.65) → Needs Review
  */
-export function getUIBucket(issue: { type: string; model_action?: "safe_cut" | "compare_takes" | "review" | "ignore" | null; confidence: number }): UIBucket {
+export function getUIBucket(issue: { type: string; model_action?: import("./types").ModelAction | null; confidence: number }): UIBucket {
   if (issue.type === "non_speech_marker") return "low_priority"
   if (issue.model_action === "safe_cut") return "ready_to_cut"
   if (issue.model_action === "compare_takes") return "compare_takes"

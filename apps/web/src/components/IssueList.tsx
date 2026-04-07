@@ -90,16 +90,19 @@ export function IssueList({
       subtitle={`${visibleIssues.length} matching issue${visibleIssues.length === 1 ? "" : "s"}`}
       storageKey="chapter-review:issue-list"
       actions={
-        <select
-          value={sortBy}
-          onChange={(e) => setSortBy(e.target.value as "time" | "confidence" | "type" | "priority")}
-          className="issue-sort-select"
-        >
-          <option value="priority">Priority</option>
-          <option value="time">Time</option>
-          <option value="confidence">Confidence</option>
-          <option value="type">Type</option>
-        </select>
+        <label className="issue-sort-label">
+          Sort within bucket:
+          <select
+            value={sortBy}
+            onChange={(e) => setSortBy(e.target.value as "time" | "confidence" | "type" | "priority")}
+            className="issue-sort-select"
+          >
+            <option value="priority">Priority</option>
+            <option value="time">Time</option>
+            <option value="confidence">Confidence</option>
+            <option value="type">Type</option>
+          </select>
+        </label>
       }
     >
       {loading ? (
@@ -183,7 +186,7 @@ function IssueBucketGroup({ bucket, meta, issues, selectedIssueId, onSelect, nor
       </div>
       <div className="issue-list-scroll-wrapper">
         {canScrollLeft ? (
-          <button type="button" className="issue-scroll-btn issue-scroll-left" onClick={() => scrollBy(-1)} aria-label="Scroll left">
+          <button type="button" className="issue-scroll-btn issue-scroll-left" onClick={() => scrollBy(-1)} aria-label={`Scroll ${meta.label} left`}>
             &lsaquo;
           </button>
         ) : null}
@@ -234,7 +237,7 @@ function IssueBucketGroup({ bucket, meta, issues, selectedIssueId, onSelect, nor
           })}
         </div>
         {canScrollRight ? (
-          <button type="button" className="issue-scroll-btn issue-scroll-right" onClick={() => scrollBy(1)} aria-label="Scroll right">
+          <button type="button" className="issue-scroll-btn issue-scroll-right" onClick={() => scrollBy(1)} aria-label={`Scroll ${meta.label} right`}>
             &rsaquo;
           </button>
         ) : null}

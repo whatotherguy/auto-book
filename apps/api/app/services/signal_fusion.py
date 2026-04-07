@@ -232,7 +232,7 @@ def _detect_pickup_candidates(
             demotion_reason = (
                 "Pure signal artifact without corroborating evidence. "
                 f"Confidence {confidence:.2f} < {PICKUP_CANDIDATE_MIN_CONFIDENCE_FOR_PRIMARY:.2f} threshold. "
-                "Requires dual signals (click+cutoff) OR confidence ≥0.75 for primary status."
+                f"Requires dual signals (click+cutoff) OR confidence ≥{PICKUP_CANDIDATE_MIN_CONFIDENCE_FOR_PRIMARY} for primary status."
             )
 
         note = f"VAD gap={gap_before}ms, click={has_click}, cutoff={has_cutoff}"

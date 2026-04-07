@@ -185,7 +185,7 @@ function ClusterCard({
                         }}
                         title="Mark for cut"
                       >
-                        Reject
+                        Cut
                       </button>
                     </>
                   ) : (
@@ -227,7 +227,7 @@ function RejectedTakesSection({
   return (
     <div className="alt-rejected-section">
       <button type="button" className="alt-rejected-toggle" onClick={() => setShown(!shown)}>
-        {shown ? "\u25bc" : "\u25b6"} {takes.length} rejected take{takes.length === 1 ? "" : "s"}
+        {shown ? "\u25bc" : "\u25b6"} {takes.length} cut take{takes.length === 1 ? "" : "s"}
       </button>
       {shown ? (
         <div className="alt-rejected-list">

@@ -450,7 +450,7 @@ export function ChapterReviewPage({
     })
     if (targetIssues.length === 0) return
 
-    const actionLabel = status === "approved" ? "Approve" : status === "rejected" ? "Reject" : "Mark for review"
+    const actionLabel = status === "approved" ? "Keep" : status === "rejected" ? "Cut" : "Mark for review"
 
     showConfirm({
       title: `${actionLabel} ${targetIssues.length} issues?`,
@@ -508,7 +508,7 @@ export function ChapterReviewPage({
       })
 
       // Show undo toast
-      const label = status === "approved" ? "Approved" : status === "rejected" ? "Rejected" : "Marked for review"
+      const label = status === "approved" ? "Kept" : status === "rejected" ? "Cut" : "Marked for review"
       setUndoToast({
         id: nextToastId(),
         message: `${label} issue #${issue.id}`,
@@ -767,10 +767,10 @@ export function ChapterReviewPage({
 
           <div className="action-group">
             <button type="button" className="approve-button" onClick={() => void handleBatchStatusChange("approved", { enabledTypes, confidence: confidenceFilter, search: searchQuery })} disabled={isBatchUpdating || issues.length === 0}>
-              {isBatchUpdating && batchProgress ? `Updating ${batchProgress.done}/${batchProgress.total}…` : "Approve Filtered"}
+              {isBatchUpdating && batchProgress ? `Updating ${batchProgress.done}/${batchProgress.total}…` : "Keep Filtered"}
             </button>
             <button type="button" className="reject-button" onClick={() => void handleBatchStatusChange("rejected", { enabledTypes, confidence: confidenceFilter, search: searchQuery })} disabled={isBatchUpdating || issues.length === 0}>
-              {isBatchUpdating && batchProgress ? `Updating ${batchProgress.done}/${batchProgress.total}…` : "Reject Filtered"}
+              {isBatchUpdating && batchProgress ? `Updating ${batchProgress.done}/${batchProgress.total}…` : "Cut Filtered"}
             </button>
             {issueStats && issueStats.total > 0 ? (
               <span className="muted" style={{ fontSize: "0.8rem", alignSelf: "center" }}>

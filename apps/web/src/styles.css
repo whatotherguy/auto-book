@@ -2651,6 +2651,115 @@ p {
   color: #d97706;
 }
 
+/* --- Issue Detail — Editor-first hero redesign --- */
+.issue-detail-rec-hero {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 12px 16px;
+  border-radius: 10px;
+  border: 1px solid;
+  margin-bottom: 12px;
+}
+
+.rec-hero-icon {
+  font-size: 1.4rem;
+  line-height: 1;
+}
+
+.rec-hero-label {
+  font-size: 1.05rem;
+  font-weight: 600;
+  letter-spacing: -0.01em;
+}
+
+.issue-detail-rec-hero.rec-hero-cut {
+  background: rgba(239, 68, 68, 0.08);
+  border-color: rgba(239, 68, 68, 0.3);
+  color: #f87171;
+}
+
+.issue-detail-rec-hero.rec-hero-keep {
+  background: rgba(74, 222, 128, 0.08);
+  border-color: rgba(74, 222, 128, 0.3);
+  color: #4ade80;
+}
+
+.issue-detail-rec-hero.rec-hero-compare {
+  background: rgba(103, 232, 249, 0.08);
+  border-color: rgba(103, 232, 249, 0.3);
+  color: #67e8f9;
+}
+
+.issue-detail-rec-hero.rec-hero-review {
+  background: rgba(251, 191, 36, 0.08);
+  border-color: rgba(251, 191, 36, 0.3);
+  color: #fbbf24;
+}
+
+.issue-detail-why {
+  font-size: 0.9rem;
+  color: #94a3b8;
+  margin: 0 0 14px;
+  line-height: 1.5;
+}
+
+.issue-detail-actions {
+  margin-bottom: 16px;
+}
+
+.issue-detail-evidence {
+  margin-bottom: 12px;
+}
+
+.evidence-row {
+  display: flex;
+  gap: 10px;
+  align-items: baseline;
+  padding: 5px 0;
+  border-bottom: 1px solid rgba(148, 163, 184, 0.08);
+  font-size: 0.88rem;
+}
+
+.evidence-row:last-child {
+  border-bottom: none;
+}
+
+.evidence-label {
+  flex-shrink: 0;
+  width: 72px;
+  font-size: 0.78rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: #64748b;
+}
+
+.evidence-value {
+  color: #cbd5e1;
+  line-height: 1.5;
+}
+
+.evidence-context {
+  align-items: flex-start;
+}
+
+mark.evidence-highlight {
+  background: rgba(251, 191, 36, 0.2);
+  color: #fbbf24;
+  border-radius: 3px;
+  padding: 0 2px;
+}
+
+.issue-detail-advanced {
+  margin-top: 8px;
+}
+
+.issue-detail-advanced .collapsible-title {
+  font-size: 0.82rem;
+  color: #64748b;
+}
+
 /* --- AltTakes Panel (dark theme) --- */
 .alt-cluster-card {
   border: 1px solid rgba(148, 163, 184, 0.16);

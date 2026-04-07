@@ -163,16 +163,18 @@ def compute_playback_window(
             playback_start, vad_segments, "before", VAD_SNAP_THRESHOLD_MS
         )
         if vad_snap_start is not None:
-            # Snap to VAD boundary, but don't go past content start
-            playback_start = min(vad_snap_start, content_start_ms)
+            # Snap to VAD boundary if it extends the window (earlier than padded start)
+            # This ensures we include the full speech region
+            playback_start = min(vad_snap_start, playback_start)
 
         # Find if there's a speech boundary near our padded end
         vad_snap_end = find_nearest_vad_boundary(
             playback_end, vad_segments, "after", VAD_SNAP_THRESHOLD_MS
         )
         if vad_snap_end is not None:
-            # Snap to VAD boundary, but don't go before content end
-            playback_end = max(vad_snap_end, content_end_ms)
+            # Snap to VAD boundary if it extends the window (later than padded end)
+            # This ensures we include the full speech region
+            playback_end = max(vad_snap_end, playback_end)
 
         # Additionally, ensure we include the full VAD segment if the content
         # is within a speech segment

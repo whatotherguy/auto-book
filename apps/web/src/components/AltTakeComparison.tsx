@@ -95,7 +95,9 @@ export function AltTakeComparison({
     }
     const audio = audioRef.current
 
-    // Use playback bounds from member if available, otherwise fall back to issue bounds
+    // Use playback bounds from member if available, otherwise fall back to issue bounds.
+    // Playback bounds may be absent for clusters created before this feature was added,
+    // or if the backend playback window computation failed for some reason.
     const playbackStart = member.playback_start_ms ?? issue.start_ms
     const playbackEnd = member.playback_end_ms ?? issue.end_ms
 

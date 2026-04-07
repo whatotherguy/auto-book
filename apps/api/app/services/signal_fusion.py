@@ -11,7 +11,6 @@ from ..detection_config import (
     NON_SPEECH_MARKER_IS_SECONDARY,
     PICKUP_CANDIDATE_BASE_CONFIDENCE,
     PICKUP_CANDIDATE_MIN_CONFIDENCE_FOR_PRIMARY,
-    PICKUP_CANDIDATE_REQUIRE_DUAL_SIGNAL,
     PICKUP_CANDIDATE_SILENCE_BOOST_MS,
     PICKUP_CLICK_PROXIMITY_MS,
     PICKUP_SILENCE_BEFORE_MS,
@@ -165,9 +164,8 @@ def _detect_pickup_candidates(
         has_cutoff = any(s["signal_type"] == "abrupt_cutoff" for s in nearby_clicks)
         has_onset = any(s["signal_type"] == "onset_burst" for s in nearby_clicks)
 
-        # TIGHTENED LOGIC: Require at least one strong signal for consideration
-        # Previously: only required click OR cutoff
-        # Now: require at least one, but dual signals boost confidence significantly
+        # Require at least one strong nearby signal for consideration.
+        # Dual signals are handled later as a confidence boost.
         if not (has_click or has_cutoff):
             continue
 

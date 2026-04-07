@@ -222,7 +222,7 @@ export function AltTakeComparison({
                         onClick={() => void onRejectTake(issue)}
                         title="Mark for cut and remove from comparison"
                       >
-                        Reject
+                        Cut
                       </button>
                     </>
                   ) : (

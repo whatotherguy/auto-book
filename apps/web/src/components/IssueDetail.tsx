@@ -1,5 +1,5 @@
 import { CompositeScores, EditorialRecommendation, Issue, IssueStatus } from "../types"
-import { formatTimecode, getConfidenceBand, PRIORITY_COLORS } from "../utils"
+import { formatTimecode, getConfidenceBand, getEditorStatusLabel, getEditorRecommendation, PRIORITY_COLORS } from "../utils"
 import { CollapsibleSection } from "./CollapsibleSection"
 import { useState } from "react"
 import { updateIssue } from "../api"
@@ -21,6 +21,7 @@ function ScoreBar({ label, score }: { label: string; score: number }) {
 
 function ScoringBreakdown({ scores, recommendation }: { scores: CompositeScores; recommendation?: EditorialRecommendation }) {
   const [open, setOpen] = useState(false)
+  const editorRec = getEditorRecommendation(recommendation?.model_action)
   return (
     <div style={{ marginTop: 8 }}>
       <button
@@ -42,7 +43,7 @@ function ScoringBreakdown({ scores, recommendation }: { scores: CompositeScores;
               <p style={{ margin: 0 }}>
                 <strong>Recommendation:</strong>{" "}
                 <span style={{ color: PRIORITY_COLORS[recommendation.priority] ?? "inherit" }}>
-                  {recommendation.action} ({recommendation.priority})
+                  {editorRec || recommendation.action} ({recommendation.priority})
                 </span>
               </p>
               <p className="muted" style={{ margin: "2px 0 0", fontSize: "0.85em" }}>{recommendation.reasoning}</p>
@@ -122,12 +123,7 @@ function formatIssueType(type: string) {
 }
 
 function formatIssueStatus(status: string) {
-  switch (status) {
-    case "needs_manual":
-      return "Needs Manual Review"
-    default:
-      return formatIssueType(status)
-  }
+  return getEditorStatusLabel(status)
 }
 
 export function IssueDetail({
@@ -198,13 +194,13 @@ export function IssueDetail({
       ) : null}
       <div className="row" aria-live="polite" style={{ marginTop: 12 }}>
         <button className="approve-button" onClick={() => void setStatus("approved")} disabled={isSaving || issue.status === "approved"}>
-          {isSaving && issue.status !== "approved" ? "Saving…" : "Approve"}
+          {isSaving && issue.status !== "approved" ? "Saving…" : "Keep"}
         </button>
         <button className="reject-button" onClick={() => void setStatus("rejected")} disabled={isSaving || issue.status === "rejected"}>
-          Reject
+          Cut
         </button>
         <button className="manual-button" onClick={() => void setStatus("needs_manual")} disabled={isSaving || issue.status === "needs_manual"}>
-          Manual Review
+          Needs Review
         </button>
       </div>
     </CollapsibleSection>

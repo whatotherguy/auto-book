@@ -3,9 +3,9 @@ import { useEffect, useState } from "react"
 const SHORTCUTS = [
   { key: "J", description: "Next issue" },
   { key: "K", description: "Previous issue" },
-  { key: "A", description: "Approve current issue" },
-  { key: "R", description: "Reject current issue" },
-  { key: "M", description: "Mark current issue for manual review" },
+  { key: "A", description: "Keep current issue" },
+  { key: "R", description: "Cut current issue" },
+  { key: "M", description: "Mark current issue for review" },
   { key: "Space", description: "Play / Pause audio" },
   { key: "?", description: "Toggle this help" },
 ]

@@ -74,3 +74,39 @@ export function getConfidenceBand(confidence: number): ConfidenceBand {
 
   return { label: "Low Confidence", className: "confidence-low" }
 }
+
+/**
+ * Translate legacy issue status to editor-facing label
+ */
+export function getEditorStatusLabel(status: string): string {
+  switch (status) {
+    case "approved":
+      return "Keep"
+    case "rejected":
+      return "Cut"
+    case "needs_manual":
+      return "Needs Review"
+    case "pending":
+      return "Unreviewed"
+    default:
+      return humanize(status)
+  }
+}
+
+/**
+ * Translate model_action to editor-facing recommendation label
+ */
+export function getEditorRecommendation(modelAction: string | null | undefined): string {
+  switch (modelAction) {
+    case "safe_cut":
+      return "Recommended: Cut"
+    case "ignore":
+      return "Recommended: Keep"
+    case "compare_takes":
+      return "Compare Takes"
+    case "review":
+      return "Needs Review"
+    default:
+      return ""
+  }
+}

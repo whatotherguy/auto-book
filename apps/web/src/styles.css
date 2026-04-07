@@ -1997,6 +1997,16 @@ p {
   color: #eab308;
 }
 
+/* Editor recommendation badge for issue cards */
+.issue-recommendation-badge {
+  font-size: 0.7rem;
+  padding: 1px 6px;
+  border-radius: 3px;
+  font-weight: 500;
+  background: rgba(103, 232, 249, 0.12);
+  color: #67e8f9;
+}
+
 /* --- Follow-Along Strip (inline in waveform) --- */
 .follow-along-strip {
   overflow-x: auto;
@@ -2206,11 +2216,13 @@ p {
   transition: width 0.3s ease;
 }
 
-.triage-progress-fill.approved {
+.triage-progress-fill.approved,
+.triage-progress-fill.kept {
   background: linear-gradient(90deg, #22c55e, #4ade80);
 }
 
-.triage-progress-fill.rejected {
+.triage-progress-fill.rejected,
+.triage-progress-fill.cut {
   background: linear-gradient(90deg, #ef4444, #f87171);
 }
 
@@ -2235,11 +2247,13 @@ p {
   display: inline-block;
 }
 
-.triage-dot.approved {
+.triage-dot.approved,
+.triage-dot.kept {
   background: #4ade80;
 }
 
-.triage-dot.rejected {
+.triage-dot.rejected,
+.triage-dot.cut {
   background: #f87171;
 }
 

@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useMemo, useRef, useState, type CSSProperties, type ReactNode } from "react"
 import { Issue } from "../types"
-import { ConfidenceFilter, getConfidenceBand, getIssueTypeMeta, humanize, PRIORITY_COLORS, PRIORITY_ORDER } from "../utils"
+import { ConfidenceFilter, getConfidenceBand, getEditorStatusLabel, getEditorRecommendation, getIssueTypeMeta, PRIORITY_COLORS, PRIORITY_ORDER } from "../utils"
 import { CollapsibleSection } from "./CollapsibleSection"
 import { SkeletonIssueList } from "./Skeleton"
 
@@ -158,10 +158,15 @@ export function IssueList({
                       </span>
                       <span className={`issue-confidence-badge ${confidenceBand.className}`}>{confidenceBand.label}</span>
                     </div>
-                    <span className="pill">{humanize(issue.status)}</span>
+                    <span className="pill">{getEditorStatusLabel(issue.status)}</span>
                   </div>
 
-                  {issue.triage_verdict ? (
+                  {/* Editor recommendation based on model action */}
+                  {issue.model_action ? (
+                    <div className="issue-card-meta">
+                      <span className="issue-recommendation-badge">{getEditorRecommendation(issue.model_action)}</span>
+                    </div>
+                  ) : issue.triage_verdict ? (
                     <div className="issue-card-meta">
                       <span className={`issue-triage-badge ${issue.triage_verdict}`} title={issue.triage_reason ?? ""}>
                         {issue.triage_verdict === "dismiss" ? "AI: Likely OK" : issue.triage_verdict === "keep" ? "AI: Review" : "AI: Unclear"}

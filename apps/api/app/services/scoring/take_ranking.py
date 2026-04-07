@@ -49,8 +49,8 @@ def rank_alternate_takes(
         reasons = []
         if text_accuracy > 0.8:
             reasons.append("high_text_accuracy")
-        if perf_quality > 0.7:
-            reasons.append("good_performance")
+        # NOTE: Performance quality is used for ranking internally but not surfaced
+        # to editors as a reason since it's ambiguous and not directly actionable.
         if cont_fit > 0.8:
             reasons.append("good_continuity")
 

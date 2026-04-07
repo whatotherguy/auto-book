@@ -140,7 +140,6 @@ function ClusterCard({
                 </div>
                 {rankedTake ? (
                   <div className="alt-take-scores">
-                    Quality: {rankedTake.performance_quality.toFixed(2)} &middot;
                     Fit: {rankedTake.continuity_fit.toFixed(2)} &middot;
                     Text: {rankedTake.text_accuracy.toFixed(2)} &middot;
                     Score: {rankedTake.total_score.toFixed(2)}

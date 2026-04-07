@@ -1,7 +1,7 @@
 import { CompositeScores, EditorialRecommendation, Issue, IssueStatus } from "../types"
 import { formatTimecode, getConfidenceBand, getEditorStatusLabel, getEditorRecommendation, PRIORITY_COLORS } from "../utils"
 import { CollapsibleSection } from "./CollapsibleSection"
-import { useState } from "react"
+import { useId, useState } from "react"
 import { updateIssue } from "../api"
 
 
@@ -21,21 +21,25 @@ function ScoreBar({ label, score }: { label: string; score: number }) {
 
 function ScoringBreakdown({ scores, recommendation }: { scores: CompositeScores; recommendation?: EditorialRecommendation }) {
   const [open, setOpen] = useState(false)
+  const [showAdvanced, setShowAdvanced] = useState(false)
   const editorRec = getEditorRecommendation(recommendation?.model_action)
+  const scoringPanelId = useId()
+  const advancedPanelId = useId()
   return (
     <div style={{ marginTop: 8 }}>
       <button
         type="button"
         onClick={() => setOpen(!open)}
         className="scoring-toggle"
+        aria-expanded={open}
+        aria-controls={scoringPanelId}
       >
         {open ? "Hide" : "Show"} Scoring Details
       </button>
       {open ? (
-        <div className="scoring-panel">
+        <div id={scoringPanelId} className="scoring-panel">
           <ScoreBar label="Mistake" score={scores.mistake_candidate?.score ?? 0} />
           <ScoreBar label="Pickup" score={scores.pickup_candidate?.score ?? 0} />
-          <ScoreBar label="Quality" score={scores.performance_quality?.score ?? 0} />
           <ScoreBar label="Continuity" score={scores.continuity_fit?.score ?? 0} />
           <ScoreBar label="Splice" score={scores.splice_readiness?.score ?? 0} />
           {recommendation ? (
@@ -52,6 +56,21 @@ function ScoringBreakdown({ scores, recommendation }: { scores: CompositeScores;
                   Ambiguity: {scores.mistake_candidate.ambiguity_flags.join("; ")}
                 </p>
               ) : null}
+            </div>
+          ) : null}
+          <button
+            type="button"
+            onClick={() => setShowAdvanced(!showAdvanced)}
+            className="scoring-toggle"
+            style={{ marginTop: 8, fontSize: "0.85em" }}
+            aria-expanded={showAdvanced}
+            aria-controls={advancedPanelId}
+          >
+            {showAdvanced ? "Hide" : "Show"} Advanced Debug Scores
+          </button>
+          {showAdvanced ? (
+            <div id={advancedPanelId} style={{ marginTop: 4, opacity: 0.7 }}>
+              <ScoreBar label="Quality (debug)" score={scores.performance_quality?.score ?? 0} />
             </div>
           ) : null}
         </div>

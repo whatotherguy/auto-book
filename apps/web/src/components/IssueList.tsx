@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useMemo, useRef, useState, type CSSProperties, type ReactNode } from "react"
 import { Issue } from "../types"
-import { ConfidenceFilter, getConfidenceBand, getEditorStatusLabel, getEditorRecommendation, getIssueTypeMeta, PRIORITY_COLORS, PRIORITY_ORDER } from "../utils"
+import { ConfidenceFilter, getConfidenceBand, getEditorStatusLabel, getEditorRecommendation, getIssueTypeMeta, PRIORITY_COLORS, PRIORITY_ORDER, getUIBucket, BUCKET_ORDER, UI_BUCKET_META, type UIBucket } from "../utils"
 import { CollapsibleSection } from "./CollapsibleSection"
 import { SkeletonIssueList } from "./Skeleton"
 
@@ -24,9 +24,6 @@ export function IssueList({
   loading = false,
 }: IssueListProps) {
   const [sortBy, setSortBy] = useState<"time" | "confidence" | "type" | "priority">("priority")
-  const scrollRef = useRef<HTMLDivElement>(null)
-  const [canScrollLeft, setCanScrollLeft] = useState(false)
-  const [canScrollRight, setCanScrollRight] = useState(false)
   const normalizedSearch = searchQuery.trim().toLowerCase()
 
   const visibleIssues = useMemo(() => issues.filter((issue) => {
@@ -65,6 +62,95 @@ export function IssueList({
     return sorted
   }, [visibleIssues, sortBy])
 
+  // Group sorted issues into buckets, preserving the intra-bucket sort order
+  const bucketedIssues = useMemo(() => {
+    const map = new Map<UIBucket, Issue[]>()
+    for (const bucket of BUCKET_ORDER) {
+      map.set(bucket, [])
+    }
+    for (const issue of sortedIssues) {
+      const bucket = getUIBucket(issue)
+      map.get(bucket)!.push(issue)
+    }
+    return map
+  }, [sortedIssues])
+
+  // Auto-scroll selected issue into view
+  useEffect(() => {
+    if (selectedIssueId == null) return
+    const el = document.querySelector(`.issue-card[aria-pressed="true"]`)
+    if (el) {
+      el.scrollIntoView({ behavior: "smooth", block: "nearest", inline: "nearest" })
+    }
+  }, [selectedIssueId])
+
+  return (
+    <CollapsibleSection
+      title="Issue List"
+      subtitle={`${visibleIssues.length} matching issue${visibleIssues.length === 1 ? "" : "s"}`}
+      storageKey="chapter-review:issue-list"
+      actions={
+        <label className="issue-sort-label">
+          Sort within bucket:
+          <select
+            value={sortBy}
+            onChange={(e) => setSortBy(e.target.value as "time" | "confidence" | "type" | "priority")}
+            className="issue-sort-select"
+          >
+            <option value="priority">Priority</option>
+            <option value="time">Time</option>
+            <option value="confidence">Confidence</option>
+            <option value="type">Type</option>
+          </select>
+        </label>
+      }
+    >
+      {loading ? (
+        <SkeletonIssueList count={5} />
+      ) : sortedIssues.length === 0 ? (
+        <p className="muted">No issues match the current search and filters.</p>
+      ) : (
+        <div className="issue-bucket-groups">
+          {BUCKET_ORDER.map((bucket) => {
+            const bucketIssues = bucketedIssues.get(bucket)!
+            if (bucketIssues.length === 0) return null
+            const meta = UI_BUCKET_META[bucket]
+            return (
+              <IssueBucketGroup
+                key={bucket}
+                bucket={bucket}
+                meta={meta}
+                issues={bucketIssues}
+                selectedIssueId={selectedIssueId}
+                onSelect={onSelect}
+                normalizedSearch={normalizedSearch}
+              />
+            )
+          })}
+        </div>
+      )}
+    </CollapsibleSection>
+  )
+}
+
+// ---------------------------------------------------------------------------
+// IssueBucketGroup: renders one editorial bucket with its own scroll strip
+// ---------------------------------------------------------------------------
+
+type IssueBucketGroupProps = {
+  bucket: UIBucket
+  meta: { label: string; icon: string; description: string }
+  issues: Issue[]
+  selectedIssueId: number | null
+  onSelect: (issue: Issue) => void
+  normalizedSearch: string
+}
+
+function IssueBucketGroup({ bucket, meta, issues, selectedIssueId, onSelect, normalizedSearch }: IssueBucketGroupProps) {
+  const scrollRef = useRef<HTMLDivElement>(null)
+  const [canScrollLeft, setCanScrollLeft] = useState(false)
+  const [canScrollRight, setCanScrollRight] = useState(false)
+
   const updateScrollButtons = useCallback(() => {
     const el = scrollRef.current
     if (!el) return
@@ -83,7 +169,7 @@ export function IssueList({
       el.removeEventListener("scroll", updateScrollButtons)
       ro.disconnect()
     }
-  }, [updateScrollButtons, sortedIssues.length])
+  }, [updateScrollButtons, issues.length])
 
   function scrollBy(direction: -1 | 1) {
     const el = scrollRef.current
@@ -91,98 +177,72 @@ export function IssueList({
     el.scrollBy({ left: direction * 300, behavior: "smooth" })
   }
 
-  // Auto-scroll selected issue into view
-  useEffect(() => {
-    if (selectedIssueId == null) return
-    const el = document.querySelector(`.issue-card[aria-pressed="true"]`)
-    if (el) {
-      el.scrollIntoView({ behavior: "smooth", block: "nearest", inline: "nearest" })
-    }
-  }, [selectedIssueId])
-
   return (
-    <CollapsibleSection
-      title="Issue List"
-      subtitle={`${visibleIssues.length} matching issue${visibleIssues.length === 1 ? "" : "s"}`}
-      storageKey="chapter-review:issue-list"
-      actions={
-        <select
-          value={sortBy}
-          onChange={(e) => setSortBy(e.target.value as "time" | "confidence" | "type" | "priority")}
-          className="issue-sort-select"
-        >
-          <option value="priority">Priority</option>
-          <option value="time">Time</option>
-          <option value="confidence">Confidence</option>
-          <option value="type">Type</option>
-        </select>
-      }
-    >
-      {loading ? (
-        <SkeletonIssueList count={5} />
-      ) : sortedIssues.length === 0 ? (
-        <p className="muted">No issues match the current search and filters.</p>
-      ) : (
-        <div className="issue-list-scroll-wrapper">
-          {canScrollLeft ? (
-            <button type="button" className="issue-scroll-btn issue-scroll-left" onClick={() => scrollBy(-1)} aria-label="Scroll left">
-              &lsaquo;
-            </button>
-          ) : null}
-          <div className="issue-list-horizontal" ref={scrollRef}>
-            {sortedIssues.map((issue) => {
-              const isSelected = issue.id === selectedIssueId
-              const typeMeta = getIssueTypeMeta(issue.type)
-              const confidenceBand = getConfidenceBand(issue.confidence)
+    <div className={`issue-bucket-group issue-bucket-${bucket}`}>
+      <div className="issue-bucket-header" title={meta.description}>
+        <span className="issue-bucket-icon" aria-hidden="true">{meta.icon}</span>
+        <span className="issue-bucket-label">{meta.label}</span>
+        <span className="issue-bucket-count">{issues.length}</span>
+      </div>
+      <div className="issue-list-scroll-wrapper">
+        {canScrollLeft ? (
+          <button type="button" className="issue-scroll-btn issue-scroll-left" onClick={() => scrollBy(-1)} aria-label={`Scroll ${meta.label} left`}>
+            &lsaquo;
+          </button>
+        ) : null}
+        <div className="issue-list-horizontal" ref={scrollRef}>
+          {issues.map((issue) => {
+            const isSelected = issue.id === selectedIssueId
+            const typeMeta = getIssueTypeMeta(issue.type)
+            const confidenceBand = getConfidenceBand(issue.confidence)
 
-              return (
-                <button
-                  key={issue.id}
-                  type="button"
-                  className={`list-item issue-card ${isSelected ? "selected" : ""}`}
-                  onClick={() => onSelect(issue)}
-                  aria-pressed={isSelected}
-                  aria-label={`${typeMeta.label} issue ${issue.id}`}
-                >
-                  <div className="issue-card-row">
-                    <div className="issue-card-meta">
-                      {issue.recommendation?.priority && issue.recommendation.priority !== "info" ? (
-                        <span
-                          className="priority-dot"
-                          style={{ background: PRIORITY_COLORS[issue.recommendation.priority] ?? "transparent" }}
-                          title={`Priority: ${issue.recommendation.priority}`}
-                        />
-                      ) : null}
-                      <span className="issue-type-badge" style={{ "--issue-color": typeMeta.color } as CSSProperties}>
-                        {(typeMeta as any).icon ? `${(typeMeta as any).icon} ` : ""}{typeMeta.label}
-                      </span>
-                      <span className={`issue-confidence-badge ${confidenceBand.className}`}>{confidenceBand.label}</span>
-                    </div>
-                    <span className="pill">{getEditorStatusLabel(issue.status)}</span>
-                  </div>
-
-                  <IssueRecommendationBadge issue={issue} />
-
-                  <div className="issue-card-text">
-                    <span className="issue-card-field">
-                      <strong>Expected:</strong> {renderHighlightedText(issue.expected_text, normalizedSearch)}
+            return (
+              <button
+                key={issue.id}
+                type="button"
+                className={`list-item issue-card ${isSelected ? "selected" : ""}`}
+                onClick={() => onSelect(issue)}
+                aria-pressed={isSelected}
+                aria-label={`${typeMeta.label} issue ${issue.id}`}
+              >
+                <div className="issue-card-row">
+                  <div className="issue-card-meta">
+                    {issue.recommendation?.priority && issue.recommendation.priority !== "info" ? (
+                      <span
+                        className="priority-dot"
+                        style={{ background: PRIORITY_COLORS[issue.recommendation.priority] ?? "transparent" }}
+                        title={`Priority: ${issue.recommendation.priority}`}
+                      />
+                    ) : null}
+                    <span className="issue-type-badge" style={{ "--issue-color": typeMeta.color } as CSSProperties}>
+                      {typeMeta.icon ? `${typeMeta.icon} ` : ""}{typeMeta.label}
                     </span>
-                    <span className="issue-card-field">
-                      <strong>Spoken:</strong> {renderHighlightedText(issue.spoken_text, normalizedSearch)}
-                    </span>
+                    <span className={`issue-confidence-badge ${confidenceBand.className}`}>{confidenceBand.label}</span>
                   </div>
-                </button>
-              )
-            })}
-          </div>
-          {canScrollRight ? (
-            <button type="button" className="issue-scroll-btn issue-scroll-right" onClick={() => scrollBy(1)} aria-label="Scroll right">
-              &rsaquo;
-            </button>
-          ) : null}
+                  <span className="pill">{getEditorStatusLabel(issue.status)}</span>
+                </div>
+
+                <IssueRecommendationBadge issue={issue} />
+
+                <div className="issue-card-text">
+                  <span className="issue-card-field">
+                    <strong>Expected:</strong> {renderHighlightedText(issue.expected_text, normalizedSearch)}
+                  </span>
+                  <span className="issue-card-field">
+                    <strong>Spoken:</strong> {renderHighlightedText(issue.spoken_text, normalizedSearch)}
+                  </span>
+                </div>
+              </button>
+            )
+          })}
         </div>
-      )}
-    </CollapsibleSection>
+        {canScrollRight ? (
+          <button type="button" className="issue-scroll-btn issue-scroll-right" onClick={() => scrollBy(1)} aria-label={`Scroll ${meta.label} right`}>
+            &rsaquo;
+          </button>
+        ) : null}
+      </div>
+    </div>
   )
 }
 

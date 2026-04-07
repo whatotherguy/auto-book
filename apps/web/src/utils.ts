@@ -53,7 +53,7 @@ export const PRIORITY_COLORS: Record<string, string> = {
 export type IssueType = keyof typeof ISSUE_TYPE_META
 
 export function getIssueTypeMeta(type: string) {
-  return ISSUE_TYPE_META[type as IssueType] ?? { label: type, color: "#888" }
+  return ISSUE_TYPE_META[type as IssueType] ?? { label: type, color: "#888", icon: "" }
 }
 
 export type ConfidenceBand = {
@@ -110,4 +110,74 @@ export function getEditorRecommendation(model_action: string | null | undefined)
     default:
       return ""
   }
+}
+
+// ---------------------------------------------------------------------------
+// UI Bucket grouping
+// ---------------------------------------------------------------------------
+
+export type UIBucket = "ready_to_cut" | "compare_takes" | "needs_review" | "probably_keep" | "low_priority"
+
+export type UIBucketMeta = {
+  label: string
+  icon: string
+  description: string
+}
+
+export const UI_BUCKET_META: Record<UIBucket, UIBucketMeta> = {
+  ready_to_cut: {
+    label: "Ready to Cut",
+    icon: "✂",
+    description: "High-confidence mistakes — safe to remove",
+  },
+  compare_takes: {
+    label: "Compare Takes",
+    icon: "⇄",
+    description: "Multiple takes detected — choose the best one",
+  },
+  needs_review: {
+    label: "Needs Review",
+    icon: "?",
+    description: "Requires editorial judgment before deciding",
+  },
+  probably_keep: {
+    label: "Probably Keep",
+    icon: "✓",
+    description: "Likely acceptable — low priority, but worth a listen",
+  },
+  low_priority: {
+    label: "Low-Priority Markers",
+    icon: "○",
+    description: "Signal-only markers and weak-evidence items — review last",
+  },
+}
+
+export const BUCKET_ORDER: UIBucket[] = [
+  "ready_to_cut",
+  "compare_takes",
+  "needs_review",
+  "probably_keep",
+  "low_priority",
+]
+
+/**
+ * Assign an issue to an editorial UI bucket based on model_action and evidence quality.
+ *
+ * Rules (evaluated in order):
+ * 1. non_speech_marker type → Low-Priority Markers (always)
+ * 2. model_action "safe_cut"      → Ready to Cut
+ * 3. model_action "compare_takes" → Compare Takes
+ * 4. model_action "review"        → Needs Review
+ * 5. model_action "ignore"        → Probably Keep
+ * 6. No model_action + confidence < 0.65 → Low-Priority Markers
+ * 7. Default (no model_action, confidence ≥ 0.65) → Needs Review
+ */
+export function getUIBucket(issue: { type: string; model_action?: import("./types").ModelAction | null; confidence: number }): UIBucket {
+  if (issue.type === "non_speech_marker") return "low_priority"
+  if (issue.model_action === "safe_cut") return "ready_to_cut"
+  if (issue.model_action === "compare_takes") return "compare_takes"
+  if (issue.model_action === "review") return "needs_review"
+  if (issue.model_action === "ignore") return "probably_keep"
+  if (issue.confidence < 0.65) return "low_priority"
+  return "needs_review"
 }

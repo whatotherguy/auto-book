@@ -287,6 +287,15 @@ def _persist_signal_data(
                 issue_id=member.get("issue_id", 0),
                 take_order=member.get("take_order", 0),
             ))
+            # Stamp the Issue row with its cluster ID so downstream code (export,
+            # UI) can check membership without joining AltTakeMember.
+            member_issue_id = member.get("issue_id")
+            if member_issue_id:
+                from ..models import Issue as IssueModel
+                db_issue = session.get(IssueModel, member_issue_id)
+                if db_issue:
+                    db_issue.alt_take_cluster_id = db_cluster.id
+                    session.add(db_issue)
 
     # Persist scoring results
     for envelope in scoring_result.get("envelopes", []):

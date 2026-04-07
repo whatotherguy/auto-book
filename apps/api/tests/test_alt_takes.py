@@ -71,6 +71,74 @@ def test_detect_alt_takes_two_overlapping():
     assert len(clusters[0]["members"]) >= 2
 
 
+def test_original_issue_type_preserved():
+    """Clustering must not overwrite the original issue type."""
+    issues = [
+        {"type": "pickup_restart", "start_ms": 100, "end_ms": 500,
+         "confidence": 0.9, "expected_text": "hello world", "spoken_text": "hello world",
+         "context_before": "", "context_after": "", "status": "approved",
+         "prosody_features_json": "{}"},
+        {"type": "repetition", "start_ms": 600, "end_ms": 1000,
+         "confidence": 0.85, "expected_text": "hello world", "spoken_text": "hello world",
+         "context_before": "", "context_after": "", "status": "approved",
+         "prosody_features_json": "{}"},
+    ]
+    manuscript_tokens = [{"text": "hello"}, {"text": "world"}]
+    spoken_tokens = [
+        {"text": "hello", "start_ms": 100, "end_ms": 200},
+        {"text": "world", "start_ms": 200, "end_ms": 500},
+        {"text": "hello", "start_ms": 600, "end_ms": 700},
+        {"text": "world", "start_ms": 700, "end_ms": 1000},
+    ]
+    alignment = {"matches": [
+        {"op": "equal", "manuscript_start": 0, "manuscript_end": 2, "spoken_start": 0, "spoken_end": 2},
+        {"op": "insert", "manuscript_start": 0, "manuscript_end": 2, "spoken_start": 2, "spoken_end": 4},
+    ]}
+    detect_alt_takes(issues, manuscript_tokens, spoken_tokens, alignment, [])
+
+    # Original types must be untouched
+    assert issues[0]["type"] == "pickup_restart"
+    assert issues[1]["type"] == "repetition"
+
+
+def test_cluster_metadata_added_to_issues_and_members():
+    """cluster_role and cluster_kind must be set; member must carry base_issue_type."""
+    issues = [
+        {"type": "pickup_restart", "start_ms": 100, "end_ms": 500,
+         "confidence": 0.9, "expected_text": "hello world", "spoken_text": "hello world",
+         "context_before": "", "context_after": "", "status": "approved",
+         "prosody_features_json": "{}"},
+        {"type": "repetition", "start_ms": 600, "end_ms": 1000,
+         "confidence": 0.85, "expected_text": "hello world", "spoken_text": "hello world",
+         "context_before": "", "context_after": "", "status": "approved",
+         "prosody_features_json": "{}"},
+    ]
+    manuscript_tokens = [{"text": "hello"}, {"text": "world"}]
+    spoken_tokens = [
+        {"text": "hello", "start_ms": 100, "end_ms": 200},
+        {"text": "world", "start_ms": 200, "end_ms": 500},
+        {"text": "hello", "start_ms": 600, "end_ms": 700},
+        {"text": "world", "start_ms": 700, "end_ms": 1000},
+    ]
+    alignment = {"matches": [
+        {"op": "equal", "manuscript_start": 0, "manuscript_end": 2, "spoken_start": 0, "spoken_end": 2},
+        {"op": "insert", "manuscript_start": 0, "manuscript_end": 2, "spoken_start": 2, "spoken_end": 4},
+    ]}
+    clusters = detect_alt_takes(issues, manuscript_tokens, spoken_tokens, alignment, [])
+    assert len(clusters) >= 1
+
+    # Issues in the cluster must carry cluster metadata
+    for issue in issues:
+        assert issue.get("cluster_role") == "alt_take_member"
+        assert issue.get("cluster_kind") in ("alt_take_candidate", "performance_variant")
+
+    # Cluster members must carry cluster_role, cluster_kind, and base_issue_type
+    for member in clusters[0]["members"]:
+        assert member.get("cluster_role") == "alt_take_member"
+        assert member.get("cluster_kind") in ("alt_take_candidate", "performance_variant")
+        assert member.get("base_issue_type") in ("pickup_restart", "repetition")
+
+
 def test_cluster_members_have_timing_fields():
     """Test that cluster members include content and playback timing fields."""
     issues = [

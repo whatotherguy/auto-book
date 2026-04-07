@@ -162,6 +162,10 @@ export type AltTakeMember = {
   cluster_id: number
   issue_id: number
   take_order: number
+  // Cluster metadata — original classification is preserved in base_issue_type
+  cluster_role?: string | null
+  cluster_kind?: string | null
+  base_issue_type?: string | null
   // Content bounds = detected core phrase/problem region (from issue start_ms/end_ms)
   content_start_ms?: number
   content_end_ms?: number
@@ -195,6 +199,9 @@ export type Issue = {
   audio_signals?: AudioSignals | null
   prosody_features?: ProsodyFeatures | null
   alt_take_cluster_id?: number | null
+  // Cluster metadata — set when this issue is part of an alt-take cluster
+  cluster_role?: string | null
+  cluster_kind?: string | null
   composite_scores?: CompositeScores | null
   recommendation?: EditorialRecommendation | null
 }

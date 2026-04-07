@@ -1,5 +1,5 @@
 import { CompositeScores, EditorialRecommendation, Issue, IssueStatus } from "../types"
-import { formatTimecode, getConfidenceBand, getEditorStatusLabel, getEditorRecommendation, PRIORITY_COLORS } from "../utils"
+import { formatTimecode, getConfidenceBand, getEditorStatusLabel, getEditorRecommendation, humanize, PRIORITY_COLORS } from "../utils"
 import { CollapsibleSection } from "./CollapsibleSection"
 import { useId, useState } from "react"
 import { updateIssue } from "../api"
@@ -134,13 +134,6 @@ function NoteEditor({ issue, onSaved }: { issue: Issue; onSaved: (updated: Issue
   )
 }
 
-function formatIssueType(type: string) {
-  return type
-    .split("_")
-    .map((part) => part.charAt(0).toUpperCase() + part.slice(1))
-    .join(" ")
-}
-
 function formatIssueStatus(status: string) {
   return getEditorStatusLabel(status)
 }
@@ -183,7 +176,7 @@ export function IssueDetail({
   return (
     <CollapsibleSection
       title="Issue Detail"
-      subtitle={formatIssueType(issue.type)}
+      subtitle={humanize(issue.type)}
       storageKey="chapter-review:issue-detail"
     >
       <div className="issue-detail-meta">
@@ -192,7 +185,17 @@ export function IssueDetail({
         <span className="pill">
           {formatTimecode(issue.start_ms)} to {formatTimecode(issue.end_ms)}
         </span>
+        {issue.alt_take_cluster_id != null || issue.recommendation?.model_action === "compare_takes" ? (
+          <span className="pill pill-cluster" title="This issue is part of an alternate-take cluster">
+            ⇄ Compare Takes
+          </span>
+        ) : null}
       </div>
+      {issue.alt_take_cluster_id != null || issue.recommendation?.model_action === "compare_takes" ? (
+        <p className="muted" style={{ margin: "4px 0 8px", fontSize: "0.9em" }}>
+          <strong>Original trigger:</strong> {humanize(issue.type)}
+        </p>
+      ) : null}
       <p><strong>Confidence Score:</strong> {issue.confidence.toFixed(2)}</p>
       {issue.triage_verdict ? (
         <p>

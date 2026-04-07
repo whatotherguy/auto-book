@@ -12,8 +12,8 @@ from app.services.export import (
 )
 
 
-def make_issue(issue_type: str, start_ms: int, end_ms: int, status: str = "approved"):
-    return SimpleNamespace(type=issue_type, start_ms=start_ms, end_ms=end_ms, status=status)
+def make_issue(issue_type: str, start_ms: int, end_ms: int, status: str = "approved", alt_take_cluster_id: int | None = None):
+    return SimpleNamespace(type=issue_type, start_ms=start_ms, end_ms=end_ms, status=status, alt_take_cluster_id=alt_take_cluster_id)
 
 
 def test_build_cut_plan_uses_only_approved_cuttable_issues():
@@ -27,6 +27,24 @@ def test_build_cut_plan_uses_only_approved_cuttable_issues():
     cut_plan = build_cut_plan([issue for issue in issues if issue.status == "approved"], duration_ms=10_000)
 
     assert cut_plan == [(1_000, 2_000), (5_000, 6_000)]
+
+
+def test_build_cut_plan_cuts_alt_take_member_by_cluster_id():
+    """An issue with any original type is cuttable when it has an alt_take_cluster_id."""
+    issues = [
+        # "missing_text" is not in CUTTABLE_ISSUE_TYPES, but membership in a cluster makes it cuttable
+        make_issue("missing_text", 1_000, 2_000, alt_take_cluster_id=42),
+        # "uncertain_alignment" likewise not in CUTTABLE_ISSUE_TYPES; cuttable via cluster
+        make_issue("uncertain_alignment", 3_000, 4_000, alt_take_cluster_id=42),
+        # A non-cluster "missing_text" should still not be cut
+        make_issue("missing_text", 5_000, 6_000),
+    ]
+
+    cut_plan = build_cut_plan(issues, duration_ms=10_000)
+
+    assert (1_000, 2_000) in cut_plan
+    assert (3_000, 4_000) in cut_plan
+    assert (5_000, 6_000) not in cut_plan
 
 
 def test_build_cut_plan_trims_long_pauses_to_target_duration():

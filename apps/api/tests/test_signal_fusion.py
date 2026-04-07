@@ -154,7 +154,16 @@ def test_detect_pickup_candidates_dual_signal_is_primary():
 
 
 def test_detect_pickup_candidates_long_silence_can_become_primary():
-    """Single signal with very long silence can reach primary threshold."""
+    """Single signal with long silence and onset burst shows accumulating evidence.
+    
+    Note: With click (0.10) + onset_burst (0.08) + long_silence (0.10) = 0.28 boosts
+    Total confidence = 0.40 (base) + 0.28 = 0.68
+    This is still BELOW the primary threshold (0.75), so it remains secondary.
+    
+    However, this demonstrates how multiple corroborating signals accumulate.
+    A dual signal (click + cutoff) would be needed for primary status without
+    very high confidence from other sources.
+    """
     audio_signals = [
         {"start_ms": 1450, "end_ms": 1500, "signal_type": "click_marker", "confidence": 0.9,
          "rms_db": None, "spectral_centroid_hz": None, "zero_crossing_rate": None,
@@ -170,10 +179,13 @@ def test_detect_pickup_candidates_long_silence_can_become_primary():
     ]
     issues = _detect_pickup_candidates(audio_signals, vad_segments, [], [])
     assert len(issues) == 1
-    # With click (0.10) + onset_burst (0.08) + long_silence (0.10) = 0.68 > 0.65
-    # This should reach primary threshold (0.40 base + 0.28 = 0.68)
+    # Verify corroboration signals are noted
     assert "long_silence" in issues[0]["note"]
     assert "onset_burst" in issues[0]["note"]
+    # Without dual signals, this remains secondary (0.68 < 0.75 threshold)
+    assert issues[0]["is_secondary"] is True
+    # But confidence is boosted by the accumulating evidence
+    assert issues[0]["confidence"] >= 0.65
 
 
 def test_detect_non_speech_markers_is_secondary():

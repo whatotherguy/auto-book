@@ -206,7 +206,10 @@ def _detect_pickup_candidates(
             confidence += 0.10
             corroboration_reasons.append("long_silence")
         elif gap_before > 500:
-            confidence += 0.05  # Reduced from 0.10
+            # Intermediate silence (500-800ms): give partial boost (0.05)
+            # Long silence (>800ms) gets full 0.10 boost for stronger evidence
+            confidence += 0.05
+            corroboration_reasons.append("medium_silence")
 
         # CORROBORATION-FIRST: Determine if this is a primary or secondary issue
         # Pure signal artifacts without strong evidence are secondary/low-priority
@@ -221,10 +224,14 @@ def _detect_pickup_candidates(
             is_secondary = False
         else:
             # Pure single-signal artifact = secondary (low priority)
+            # Note: Text-based issues (repetition, pickup_restart, substitution) are
+            # detected separately in detect.py and have text corroboration built-in.
+            # Here we only have audio signals, so we require either dual signals
+            # or very high confidence to promote to primary.
             demotion_reason = (
                 "Pure signal artifact without corroborating evidence. "
                 f"Confidence {confidence:.2f} < {PICKUP_CANDIDATE_MIN_CONFIDENCE_FOR_PRIMARY:.2f} threshold. "
-                "Requires text mismatch, repeat/restart structure, or dual signals for primary status."
+                "Requires dual signals (click+cutoff) for primary status."
             )
 
         note = f"VAD gap={gap_before}ms, click={has_click}, cutoff={has_cutoff}"

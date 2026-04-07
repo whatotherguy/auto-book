@@ -177,7 +177,6 @@ export function AltTakeComparison({
 
                 {rankedTake ? (
                   <div className="alt-compare-scores">
-                    <ScoreBar label="Quality" value={rankedTake.performance_quality} />
                     <ScoreBar label="Fit" value={rankedTake.continuity_fit} />
                     <ScoreBar label="Text" value={rankedTake.text_accuracy} />
                     <ScoreBar label="Splice" value={rankedTake.splice_readiness} />

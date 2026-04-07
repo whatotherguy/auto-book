@@ -68,13 +68,16 @@ def test_rank_close_call_low_confidence():
 
 
 def test_rank_reasons_populated():
+    # NOTE: good_performance was removed from user-facing reasons because
+    # performance quality is ambiguous and not directly actionable.
     cluster = {"id": 1, "members": [{"issue_id": 10, "issue_index": 0}]}
     envelopes = {10: _envelope(mistake=0.1, performance=0.8, continuity=0.9)}
     result = rank_alternate_takes(cluster, envelopes)
     take = result["ranked_takes"][0]
     assert "high_text_accuracy" in take["reasons"]
-    assert "good_performance" in take["reasons"]
     assert "good_continuity" in take["reasons"]
+    # performance_quality is still used for ranking but not surfaced as a reason
+    assert "good_performance" not in take["reasons"]
 
 
 def test_rank_missing_envelope_uses_defaults():

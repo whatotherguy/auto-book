@@ -53,14 +53,16 @@ def test_review_mistake_high():
     assert rec["priority"] == "high"
 
 
-def test_low_performance():
-    rec = generate_recommendation(_scores(performance=0.3))
-    assert rec["action"] == "review_mistake"
-    assert rec["model_action"] == "review"
-    assert rec["priority"] == "low"
-
-
 def test_no_action():
+    # Low performance should NOT cause a review_mistake action anymore
+    rec = generate_recommendation(_scores(performance=0.3))
+    assert rec["action"] == "no_action"
+    assert rec["model_action"] == "ignore"
+    assert rec["priority"] == "info"
+    assert rec["confidence"] == 0.9
+
+
+def test_no_action_with_good_performance():
     rec = generate_recommendation(_scores(performance=0.7))
     assert rec["action"] == "no_action"
     assert rec["model_action"] == "ignore"

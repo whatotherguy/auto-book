@@ -28,12 +28,10 @@ def generate_recommendation(
     """Generate an editorial recommendation from composite scores."""
     mistake = composite_scores.get("mistake_candidate", {})
     pickup = composite_scores.get("pickup_candidate", {})
-    performance = composite_scores.get("performance_quality", {})
     splice = composite_scores.get("splice_readiness", {})
 
     mistake_score = mistake.get("score", 0.0)
     pickup_score = pickup.get("score", 0.0)
-    performance_score = performance.get("score", 0.0)
     splice_score = splice.get("score", 0.0)
     splice_confidence = splice.get("confidence", 0.0)
 
@@ -96,14 +94,9 @@ def generate_recommendation(
             ambiguity=all_ambiguity,
         )
 
-    if performance_score < 0.5:
-        return _make_recommendation(
-            action="review_mistake",
-            priority="low",
-            reasoning=f"Performance quality {performance_score:.2f} below threshold.",
-            confidence=performance.get("confidence", 0.5),
-            ambiguity=all_ambiguity,
-        )
+    # NOTE: performance_quality is intentionally NOT used for editorial decision routing.
+    # It remains available for alt-take ranking and debugging, but does not trigger
+    # editor-facing actions since it is ambiguous and not directly actionable.
 
     return _make_recommendation(
         action="no_action",

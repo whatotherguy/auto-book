@@ -231,19 +231,25 @@ def detect_alt_takes(
 
         ms_text = " ".join(dict.fromkeys(ms_text_parts))  # deduplicate preserving order
 
-        # Mark performance variants
+        # Detect performance variants and annotate issues with cluster metadata.
+        # We preserve the original issue type so downstream code can still
+        # interpret the original trigger classification.
+        #
+        # cluster_kind values:
+        #   "performance_variant"  — same text, detectably different prosody
+        #                           (speech rate or f0 exceeds configured thresholds)
+        #   "alt_take_candidate"   — overlapping manuscript span, no prosody contrast
         cluster_issues = [issue for _, issue, _ in cluster]
         variants = _detect_performance_variants(cluster_issues, prosody_map)
+        variant_indices: set[int] = set()
         for i, j in variants:
-            if cluster_issues[i].get("type") not in ("performance_variant", "alt_take"):
-                cluster_issues[i]["type"] = "performance_variant"
-            if cluster_issues[j].get("type") not in ("performance_variant", "alt_take"):
-                cluster_issues[j]["type"] = "performance_variant"
+            variant_indices.add(i)
+            variant_indices.add(j)
 
-        # Mark remaining as alt_take
-        for _, issue, _ in cluster:
-            if issue.get("type") not in ("performance_variant",):
-                issue["type"] = "alt_take"
+        for k, (_, issue, _) in enumerate(cluster):
+            cluster_kind = "performance_variant" if k in variant_indices else "alt_take_candidate"
+            issue["cluster_role"] = "alt_take_member"
+            issue["cluster_kind"] = cluster_kind
 
         # Get sorted cluster members by time
         sorted_cluster = sorted(cluster, key=lambda x: x[1].get("start_ms", 0))
@@ -273,6 +279,10 @@ def detect_alt_takes(
                 "issue_index": idx,
                 "issue_id": issue.get("id"),
                 "take_order": order,
+                # Cluster metadata — preserves original classification
+                "cluster_role": "alt_take_member",
+                "cluster_kind": issue.get("cluster_kind", "alt_take_candidate"),
+                "base_issue_type": issue.get("type"),
                 # Content bounds = raw issue timing (detected core phrase)
                 "content_start_ms": issue.get("start_ms", 0),
                 "content_end_ms": issue.get("end_ms", 0),

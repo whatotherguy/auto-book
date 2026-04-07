@@ -452,6 +452,8 @@ def get_alt_take_clusters(chapter_id: int, session: Session = Depends(get_sessio
                 member_dict["content_end_ms"] = content_end
                 member_dict["playback_start_ms"] = playback_start
                 member_dict["playback_end_ms"] = playback_end
+                member_dict["base_issue_type"] = issue.type
+                member_dict["cluster_role"] = "alt_take_member"
             enriched_members.append(member_dict)
 
         cluster_dict["members"] = enriched_members

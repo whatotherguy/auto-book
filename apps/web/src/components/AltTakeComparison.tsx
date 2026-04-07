@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from "react"
 import { AltTakeCluster, AltTakeMember, Issue } from "../types"
-import { formatTimecode } from "../utils"
+import { formatTimecode, humanize } from "../utils"
 
 type AltTakeComparisonProps = {
   cluster: AltTakeCluster
@@ -167,6 +167,12 @@ export function AltTakeComparison({
                   {isPreferred ? <span className="alt-compare-preferred-badge">Preferred</span> : null}
                   {rankedTake ? <span className="muted">Rank #{rankedTake.rank}</span> : null}
                 </div>
+
+                {member.base_issue_type ? (
+                  <div className="alt-compare-trigger muted" style={{ fontSize: "0.82em", marginBottom: 4 }}>
+                    Original trigger: <strong>{humanize(member.base_issue_type)}</strong>
+                  </div>
+                ) : null}
 
                 <div className="alt-compare-spoken-text">
                   "{issue.spoken_text}"

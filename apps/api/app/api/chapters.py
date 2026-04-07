@@ -393,6 +393,8 @@ def get_vad_segments(chapter_id: int, session: Session = Depends(get_session)):
 
 @router.get("/chapters/{chapter_id}/alt-take-clusters")
 def get_alt_take_clusters(chapter_id: int, session: Session = Depends(get_session)):
+    from ..services.take_windows import compute_playback_window
+
     chapter = session.get(Chapter, chapter_id)
     if not chapter:
         raise HTTPException(status_code=404, detail="Chapter not found")
@@ -409,12 +411,50 @@ def get_alt_take_clusters(chapter_id: int, session: Session = Depends(get_sessio
     ).all()
     members_by_cluster: dict[int, list] = {c.id: [] for c in clusters}
     for m in all_members:
-        members_by_cluster[m.cluster_id].append(m.model_dump())
+        members_by_cluster[m.cluster_id].append(m)
+
+    # Load issues and VAD segments to compute playback windows
+    member_issue_ids = [m.issue_id for m in all_members]
+    issues_by_id: dict[int, Issue] = {}
+    if member_issue_ids:
+        issues = session.exec(
+            select(Issue).where(Issue.id.in_(member_issue_ids))
+        ).all()
+        issues_by_id = {i.id: i for i in issues}
+
+    vad_segments = session.exec(
+        select(VadSegment).where(VadSegment.chapter_id == chapter_id)
+    ).all()
+    vad_segment_dicts = [{"start_ms": s.start_ms, "end_ms": s.end_ms} for s in vad_segments]
+
+    audio_duration_ms = chapter.duration_ms
 
     result = []
     for cluster in clusters:
         cluster_dict = cluster.model_dump()
-        cluster_dict["members"] = members_by_cluster.get(cluster.id, [])
+        raw_members = members_by_cluster.get(cluster.id, [])
+
+        # Compute playback windows for each member
+        enriched_members = []
+        for m in raw_members:
+            member_dict = m.model_dump()
+            issue = issues_by_id.get(m.issue_id)
+            if issue:
+                content_start = issue.start_ms
+                content_end = issue.end_ms
+                playback_start, playback_end = compute_playback_window(
+                    content_start,
+                    content_end,
+                    vad_segments=vad_segment_dicts,
+                    audio_duration_ms=audio_duration_ms,
+                )
+                member_dict["content_start_ms"] = content_start
+                member_dict["content_end_ms"] = content_end
+                member_dict["playback_start_ms"] = playback_start
+                member_dict["playback_end_ms"] = playback_end
+            enriched_members.append(member_dict)
+
+        cluster_dict["members"] = enriched_members
         cluster_dict["ranking"] = None
         result.append(cluster_dict)
     return result

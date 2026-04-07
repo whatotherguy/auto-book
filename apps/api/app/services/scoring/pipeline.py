@@ -141,13 +141,10 @@ def run_scoring_pipeline(
         issue["recommendation"] = recommendation
         issue["priority"] = recommendation.get("priority", "info")
 
-        # Map recommendation to status
-        action = recommendation.get("action", "no_action")
-        if action == "safe_auto_cut":
-            issue["status"] = "approved"
-        elif action == "no_action":
-            issue["status"] = "rejected"
-        # All others keep their existing status or "needs_manual"
+        # Set model_action from recommendation (do NOT set editor_decision - that's user-only)
+        issue["model_action"] = recommendation.get("model_action", "review")
+        # Note: We deliberately do NOT set editor_decision here.
+        # The model may suggest actions via model_action, but editor_decision is user-only.
 
     # Step 6: Rank alt-takes
     for cluster in alt_take_clusters:

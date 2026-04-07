@@ -56,9 +56,18 @@ class Issue(SQLModel, table=True):
     context_before: str = ""
     context_after: str = ""
     note: Optional[str] = None
-    status: str = "approved"
+    # DEPRECATED: status field is kept for backward compatibility
+    # Use editor_decision and review_state for new code
+    status: str = "pending"
     triage_verdict: Optional[str] = None    # "keep", "dismiss", "uncertain", or None
     triage_reason: Optional[str] = None     # LLM explanation
+    # New review decision fields (v2)
+    # editor_decision: "cut", "keep", "needs_review", or None (untouched)
+    editor_decision: Optional[str] = None
+    # model_action: "safe_cut", "compare_takes", "review", "ignore"
+    model_action: Optional[str] = None
+    # review_state: "unreviewed", "reviewed"
+    review_state: str = "unreviewed"
     # Signal features (JSON blobs)
     audio_features_json: Optional[str] = None
     audio_signals_json: Optional[str] = None

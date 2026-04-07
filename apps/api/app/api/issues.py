@@ -21,8 +21,8 @@ def list_chapter_issues(chapter_id: int, session: Session = Depends(get_session)
 
 @router.get("/chapters/{chapter_id}/issues/stats")
 def get_chapter_issue_stats(chapter_id: int, session: Session = Depends(get_session)):
-    """Return aggregate counts for the chapter's issues by status, type, and confidence band."""
-    # Count by status using a single GROUP BY query — avoids loading full Issue rows.
+    """Return aggregate counts for the chapter's issues by status, type, confidence band, and review state."""
+    # Count by legacy status using a single GROUP BY query — avoids loading full Issue rows.
     status_rows = session.exec(
         select(Issue.status, func.count()).where(Issue.chapter_id == chapter_id).group_by(Issue.status)
     ).all()
@@ -48,14 +48,41 @@ def get_chapter_issue_stats(chapter_id: int, session: Session = Depends(get_sess
         ).where(Issue.chapter_id == chapter_id)
     ).one()
 
+    # Count by new review_state field
+    review_state_rows = session.exec(
+        select(Issue.review_state, func.count()).where(Issue.chapter_id == chapter_id).group_by(Issue.review_state)
+    ).all()
+    review_state_counts = {state: count for state, count in review_state_rows}
+
+    # Count by editor_decision
+    decision_rows = session.exec(
+        select(Issue.editor_decision, func.count()).where(Issue.chapter_id == chapter_id).group_by(Issue.editor_decision)
+    ).all()
+    decision_counts = {decision if decision else "none": count for decision, count in decision_rows}
+
+    # Count by model_action
+    action_rows = session.exec(
+        select(Issue.model_action, func.count()).where(Issue.chapter_id == chapter_id).group_by(Issue.model_action)
+    ).all()
+    action_counts = {action if action else "none": count for action, count in action_rows}
+
     total = sum(status_counts.values())
-    reviewed = status_counts.get("approved", 0) + status_counts.get("rejected", 0)
+    # Use new review_state for reviewed count, fallback to legacy status
+    reviewed = review_state_counts.get("reviewed", 0)
+    # If no issues have the new review_state yet, fall back to legacy calculation
+    if reviewed == 0 and total > 0:
+        reviewed = status_counts.get("approved", 0) + status_counts.get("rejected", 0)
+
     return {
         "total": total,
         "reviewed": reviewed,
         "by_status": status_counts,
         "by_type": type_counts,
         "by_confidence": {"high": int(high or 0), "medium": int(medium or 0), "low": int(low or 0)},
+        # New v2 fields
+        "by_review_state": review_state_counts,
+        "by_editor_decision": decision_counts,
+        "by_model_action": action_counts,
     }
 
 
@@ -71,8 +98,16 @@ def batch_update_issues(payload: IssueBatchUpdate, session: Session = Depends(ge
 
     now = utc_now()
     for issue in issues:
+        # Legacy status field (deprecated)
         if payload.status is not None:
             issue.status = payload.status
+        # New v2 decision fields
+        if payload.editor_decision is not None:
+            issue.editor_decision = payload.editor_decision
+            # When editor makes a decision, mark as reviewed
+            issue.review_state = "reviewed"
+        if payload.review_state is not None:
+            issue.review_state = payload.review_state
         if payload.note is not None:
             issue.note = payload.note
         issue.updated_at = now
@@ -106,8 +141,16 @@ def update_issue(issue_id: int, payload: IssueUpdate, session: Session = Depends
                 detail=f"end_ms must be less than or equal to chapter duration_ms ({chapter.duration_ms})",
             )
 
+    # Legacy status field (deprecated)
     if payload.status is not None:
         issue.status = payload.status
+    # New v2 decision fields
+    if payload.editor_decision is not None:
+        issue.editor_decision = payload.editor_decision
+        # When editor makes a decision, mark as reviewed
+        issue.review_state = "reviewed"
+    if payload.review_state is not None:
+        issue.review_state = payload.review_state
     if payload.note is not None:
         issue.note = payload.note
     if payload.start_ms is not None:

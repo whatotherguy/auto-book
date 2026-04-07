@@ -414,7 +414,7 @@ def detect_alignment_issues(
     matches = alignment.get("matches", [])
     pickup_issues = detect_pickup_restarts(manuscript_tokens, spoken_tokens, alignment)
 
-    for match in matches:
+    for match_index, match in enumerate(matches):
         op = match.get("op")
         manuscript_start = int(match.get("manuscript_start", 0))
         manuscript_end = int(match.get("manuscript_end", manuscript_start))
@@ -428,7 +428,6 @@ def detect_alignment_issues(
             # Check flanking matches for confidence boosting
             boosted_confidence = MISSING_TEXT_CONFIDENCE
             if span_length >= 5:
-                match_index = matches.index(match)
                 prev_is_equal = match_index > 0 and matches[match_index - 1].get("op") == "equal"
                 next_is_equal = match_index < len(matches) - 1 and matches[match_index + 1].get("op") == "equal"
                 if prev_is_equal and next_is_equal:
@@ -572,6 +571,8 @@ def persist_issue_models(session: Session, chapter_id: int, issue_records: Seque
             context_after=str(issue_record.get("context_after", "")),
             note=issue_record.get("note"),
             status=status,
+            triage_verdict=issue_record.get("triage_verdict"),
+            triage_reason=issue_record.get("triage_reason"),
             model_action=model_action,
             audio_features_json=issue_record.get("audio_features_json"),
             audio_signals_json=issue_record.get("audio_signals_json"),

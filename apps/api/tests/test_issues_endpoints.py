@@ -252,7 +252,8 @@ def test_update_issue_review_state(tmp_path, monkeypatch):
             issue_id = issue.id
 
         # First verify default is unreviewed
-        assert session.get(Issue, issue_id).review_state == "unreviewed"
+        with Session(engine) as session:
+            assert session.get(Issue, issue_id).review_state == "unreviewed"
 
         resp = client.patch(f"/issues/{issue_id}", json={"review_state": "reviewed"})
         assert resp.status_code == 200

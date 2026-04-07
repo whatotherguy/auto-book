@@ -36,7 +36,7 @@ def upgrade() -> None:
     if 'model_action' not in existing_cols:
         op.add_column('issue', sa.Column('model_action', sa.String, nullable=True))
     if 'review_state' not in existing_cols:
-        op.add_column('issue', sa.Column('review_state', sa.String, nullable=False, server_default='unreviewed'))
+        op.add_column('issue', sa.Column('review_state', sa.String, nullable=False, server_default=sa.text("'unreviewed'")))
 
     # Update existing issues: migrate legacy status to new fields
     # - approved -> review_state="reviewed" (but don't set editor_decision, let user decide)

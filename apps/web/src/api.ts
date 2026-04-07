@@ -172,10 +172,10 @@ export function getIssueStats(chapterId: number) {
 export function batchUpdateIssues(
   issueIds: number[],
   payload: {
-    status?: Issue["status"]
-    editor_decision?: EditorDecision
-    review_state?: ReviewState
-    note?: string
+    status?: Issue["status"] | null
+    editor_decision?: EditorDecision | null
+    review_state?: ReviewState | null
+    note?: string | null
   }
 ) {
   return fetchJson<Issue[]>("/issues/batch-update", {

@@ -100,16 +100,22 @@ def batch_update_issues(payload: IssueBatchUpdate, session: Session = Depends(ge
 
     now = utc_now()
     for issue in issues:
-        # Legacy status field (deprecated)
+        # Legacy status field (deprecated) - also update review_state for backward compatibility
         if payload.status is not None:
             issue.status = payload.status
-        # New v2 decision fields
-        if payload.editor_decision is not None:
-            issue.editor_decision = payload.editor_decision
-            # When editor makes a decision, mark as reviewed
-            issue.review_state = "reviewed"
+            # Map legacy status to review_state for consistency
+            if payload.status in ("approved", "rejected"):
+                issue.review_state = "reviewed"
+            elif payload.status in ("needs_manual", "pending"):
+                issue.review_state = "unreviewed"
+        # Apply review_state first (if provided), then editor_decision can override
         if payload.review_state is not None:
             issue.review_state = payload.review_state
+        # New v2 decision fields - editor_decision always implies reviewed
+        if payload.editor_decision is not None:
+            issue.editor_decision = payload.editor_decision
+            # When editor makes a decision, always mark as reviewed (overrides review_state)
+            issue.review_state = "reviewed"
         if payload.note is not None:
             issue.note = payload.note
         issue.updated_at = now
@@ -143,16 +149,22 @@ def update_issue(issue_id: int, payload: IssueUpdate, session: Session = Depends
                 detail=f"end_ms must be less than or equal to chapter duration_ms ({chapter.duration_ms})",
             )
 
-    # Legacy status field (deprecated)
+    # Legacy status field (deprecated) - also update review_state for backward compatibility
     if payload.status is not None:
         issue.status = payload.status
-    # New v2 decision fields
-    if payload.editor_decision is not None:
-        issue.editor_decision = payload.editor_decision
-        # When editor makes a decision, mark as reviewed
-        issue.review_state = "reviewed"
+        # Map legacy status to review_state for consistency
+        if payload.status in ("approved", "rejected"):
+            issue.review_state = "reviewed"
+        elif payload.status in ("needs_manual", "pending"):
+            issue.review_state = "unreviewed"
+    # Apply review_state first (if provided), then editor_decision can override
     if payload.review_state is not None:
         issue.review_state = payload.review_state
+    # New v2 decision fields - editor_decision always implies reviewed
+    if payload.editor_decision is not None:
+        issue.editor_decision = payload.editor_decision
+        # When editor makes a decision, always mark as reviewed (overrides review_state)
+        issue.review_state = "reviewed"
     if payload.note is not None:
         issue.note = payload.note
     if payload.start_ms is not None:

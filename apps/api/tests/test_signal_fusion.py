@@ -3,6 +3,7 @@ from app.services.signal_fusion import (
     _find_signals_near,
     _build_audio_signals_flags,
     _build_prosody_features,
+    _get_prosody_for_range,
     _detect_pickup_candidates,
     _detect_non_speech_markers,
     enrich_issues,
@@ -221,3 +222,160 @@ def test_detect_pickup_candidate_note_explains_demotion():
     # Note should explain the demotion reason
     assert "Pure signal artifact" in issues[0]["note"]
     assert "corroborating evidence" in issues[0]["note"]
+
+
+# === PROSODY RANGE AGGREGATION TESTS ===
+
+def _make_token(start_ms: int, end_ms: int) -> dict:
+    return {"start_ms": start_ms, "end_ms": end_ms}
+
+
+def test_get_prosody_for_range_no_overlap_returns_none():
+    """No overlapping tokens → None (fallback)."""
+    tokens = [_make_token(0, 500)]
+    prosody_map = [{"duration_ms": 500, "speech_rate_wps": 2.0, "f0_mean_hz": 120.0,
+                    "f0_std_hz": 10.0, "f0_contour": [], "energy_contour": [],
+                    "pause_before_ms": 0, "pause_after_ms": 0}]
+    result = _get_prosody_for_range(prosody_map, tokens, 1000, 1500)
+    assert result is None
+
+
+def test_get_prosody_for_range_single_overlap_returns_entry():
+    """Single overlapping token → returns that entry directly (no aggregation overhead)."""
+    tokens = [_make_token(100, 400), _make_token(500, 900)]
+    prosody_map = [
+        {"duration_ms": 300, "speech_rate_wps": 3.0, "f0_mean_hz": 130.0,
+         "f0_std_hz": 12.0, "f0_contour": [130.0], "energy_contour": [0.01],
+         "pause_before_ms": 50, "pause_after_ms": 30},
+        {"duration_ms": 400, "speech_rate_wps": 2.5, "f0_mean_hz": 140.0,
+         "f0_std_hz": 8.0, "f0_contour": [140.0], "energy_contour": [0.02],
+         "pause_before_ms": 20, "pause_after_ms": 10},
+    ]
+    result = _get_prosody_for_range(prosody_map, tokens, 100, 400)
+    assert result is prosody_map[0]
+
+
+def test_get_prosody_for_range_aggregates_multiple_tokens():
+    """Multiple overlapping tokens → aggregated values returned."""
+    tokens = [_make_token(0, 300), _make_token(300, 600), _make_token(600, 900)]
+    prosody_map = [
+        {"duration_ms": 300, "speech_rate_wps": 2.0, "f0_mean_hz": 100.0,
+         "f0_std_hz": 10.0, "f0_contour": [100.0, 105.0], "energy_contour": [0.01],
+         "pause_before_ms": 50, "pause_after_ms": 0},
+        {"duration_ms": 300, "speech_rate_wps": 4.0, "f0_mean_hz": 120.0,
+         "f0_std_hz": 20.0, "f0_contour": [120.0, 115.0], "energy_contour": [0.02],
+         "pause_before_ms": 0, "pause_after_ms": 0},
+        {"duration_ms": 300, "speech_rate_wps": 3.0, "f0_mean_hz": 110.0,
+         "f0_std_hz": 15.0, "f0_contour": [110.0], "energy_contour": [0.03],
+         "pause_before_ms": 0, "pause_after_ms": 80},
+    ]
+    result = _get_prosody_for_range(prosody_map, tokens, 0, 900)
+    assert result is not None
+
+    # duration_ms should be sum
+    assert result["duration_ms"] == 900
+
+    # speech_rate_wps should be mean of [2.0, 4.0, 3.0]
+    assert abs(result["speech_rate_wps"] - 3.0) < 1e-9
+
+    # f0_mean_hz should be mean of [100, 120, 110]
+    assert abs(result["f0_mean_hz"] - 110.0) < 1e-9
+
+    # f0_std_hz should be mean of [10, 20, 15]
+    assert abs(result["f0_std_hz"] - 15.0) < 1e-9
+
+    # contours should be concatenated
+    assert result["f0_contour"] == [100.0, 105.0, 120.0, 115.0, 110.0]
+    assert result["energy_contour"] == [0.01, 0.02, 0.03]
+
+    # pause_before from first, pause_after from last
+    assert result["pause_before_ms"] == 50
+    assert result["pause_after_ms"] == 80
+
+
+def test_get_prosody_for_range_partial_overlap():
+    """Only a subset of tokens overlap the query range; aggregate only those."""
+    tokens = [_make_token(0, 300), _make_token(300, 600), _make_token(600, 900)]
+    prosody_map = [
+        {"duration_ms": 300, "speech_rate_wps": 2.0, "f0_mean_hz": 100.0,
+         "f0_std_hz": 10.0, "f0_contour": [], "energy_contour": [],
+         "pause_before_ms": 0, "pause_after_ms": 0},
+        {"duration_ms": 300, "speech_rate_wps": 4.0, "f0_mean_hz": 120.0,
+         "f0_std_hz": 20.0, "f0_contour": [], "energy_contour": [],
+         "pause_before_ms": 0, "pause_after_ms": 0},
+        {"duration_ms": 300, "speech_rate_wps": 3.0, "f0_mean_hz": 110.0,
+         "f0_std_hz": 15.0, "f0_contour": [], "energy_contour": [],
+         "pause_before_ms": 0, "pause_after_ms": 0},
+    ]
+    # Query starts at 301ms, so only tokens 1 (300–600) and 2 (600–900) overlap
+    result = _get_prosody_for_range(prosody_map, tokens, 301, 900)
+    assert result is not None
+    assert result["duration_ms"] == 600
+    assert abs(result["speech_rate_wps"] - 3.5) < 1e-9
+    assert abs(result["f0_mean_hz"] - 115.0) < 1e-9
+
+
+def test_get_prosody_for_range_missing_f0_handled():
+    """Tokens without f0 data → f0 fields are None in aggregate."""
+    tokens = [_make_token(0, 300), _make_token(300, 600)]
+    prosody_map = [
+        {"duration_ms": 300, "speech_rate_wps": 2.0, "f0_mean_hz": None,
+         "f0_std_hz": None, "f0_contour": [], "energy_contour": [],
+         "pause_before_ms": 0, "pause_after_ms": 0},
+        {"duration_ms": 300, "speech_rate_wps": 4.0, "f0_mean_hz": None,
+         "f0_std_hz": None, "f0_contour": [], "energy_contour": [],
+         "pause_before_ms": 0, "pause_after_ms": 0},
+    ]
+    result = _get_prosody_for_range(prosody_map, tokens, 0, 600)
+    assert result is not None
+    assert result["f0_mean_hz"] is None
+    assert result["f0_std_hz"] is None
+
+
+def test_get_prosody_for_range_float_timestamps():
+    """Tokens using float 'start'/'end' keys (seconds) are resolved correctly."""
+    tokens = [
+        {"start": "0.1", "end": "0.4"},   # 100–400 ms
+        {"start": "0.4", "end": "0.8"},   # 400–800 ms
+    ]
+    prosody_map = [
+        {"duration_ms": 300, "speech_rate_wps": 2.0, "f0_mean_hz": 130.0,
+         "f0_std_hz": 5.0, "f0_contour": [], "energy_contour": [],
+         "pause_before_ms": 0, "pause_after_ms": 0},
+        {"duration_ms": 400, "speech_rate_wps": 3.0, "f0_mean_hz": 150.0,
+         "f0_std_hz": 7.0, "f0_contour": [], "energy_contour": [],
+         "pause_before_ms": 0, "pause_after_ms": 0},
+    ]
+    result = _get_prosody_for_range(prosody_map, tokens, 100, 800)
+    assert result is not None
+    assert result["duration_ms"] == 700
+    assert abs(result["speech_rate_wps"] - 2.5) < 1e-9
+    assert abs(result["f0_mean_hz"] - 140.0) < 1e-9
+
+
+def test_enrich_issues_prosody_aggregates_multiple_tokens():
+    """enrich_issues correctly aggregates prosody across multiple spanning tokens."""
+    tokens = [
+        {"start_ms": 0, "end_ms": 300},
+        {"start_ms": 300, "end_ms": 600},
+    ]
+    prosody_map = [
+        {"duration_ms": 300, "speech_rate_wps": 2.0, "f0_mean_hz": 100.0,
+         "f0_std_hz": 10.0, "f0_contour": [], "energy_contour": [],
+         "pause_before_ms": 50, "pause_after_ms": 0},
+        {"duration_ms": 300, "speech_rate_wps": 4.0, "f0_mean_hz": 120.0,
+         "f0_std_hz": 20.0, "f0_contour": [], "energy_contour": [],
+         "pause_before_ms": 0, "pause_after_ms": 80},
+    ]
+    issues = [
+        {"type": "repetition", "start_ms": 0, "end_ms": 600,
+         "confidence": 0.9, "expected_text": "hello", "spoken_text": "hello hello",
+         "context_before": "", "context_after": "", "status": "approved"},
+    ]
+    enriched = enrich_issues(issues, [], [], prosody_map, tokens, [], {})
+    pf = json.loads(enriched[0]["prosody_features_json"])
+    assert pf["duration_ms"] == 600
+    assert abs(pf["speech_rate_wps"] - 3.0) < 1e-9
+    assert abs(pf["f0_mean_hz"] - 110.0) < 1e-9
+    assert pf["pause_before_ms"] == 50
+    assert pf["pause_after_ms"] == 80

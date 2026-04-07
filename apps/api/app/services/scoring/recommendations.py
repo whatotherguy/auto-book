@@ -48,14 +48,24 @@ def generate_recommendation(
     # CORROBORATION-FIRST: Handle secondary issues early
     # Secondary issues are available but have lower visibility
     if is_secondary:
+        # Build appropriate reasoning based on issue type
+        if issue_type == "non_speech_marker":
+            reasoning_text = (
+                f"Secondary {issue_type} issue. "
+                "Non-speech markers are low-priority by default configuration. "
+                "Available for specialized review but not prioritized."
+            )
+        else:
+            reasoning_text = (
+                f"Secondary {issue_type or 'signal'} issue. "
+                "Pure audio signal without corroborating evidence or below confidence threshold. "
+                "Available for specialized review but not prioritized."
+            )
+        
         return _make_recommendation(
             action="secondary_signal",
             priority="info",
-            reasoning=(
-                f"Secondary {issue_type or 'signal'} issue. "
-                "Pure audio signal without corroborating text evidence. "
-                "Available for specialized review but not prioritized."
-            ),
+            reasoning=reasoning_text,
             confidence=0.5,
             ambiguity=[],
             is_secondary=True,

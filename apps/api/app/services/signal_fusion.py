@@ -8,7 +8,11 @@ from typing import Any, Sequence
 
 from ..detection_config import (
     NON_SPEECH_MARKER_CONFIDENCE,
+    NON_SPEECH_MARKER_IS_SECONDARY,
     PICKUP_CANDIDATE_BASE_CONFIDENCE,
+    PICKUP_CANDIDATE_MIN_CONFIDENCE_FOR_PRIMARY,
+    PICKUP_CANDIDATE_REQUIRE_DUAL_SIGNAL,
+    PICKUP_CANDIDATE_SILENCE_BOOST_MS,
     PICKUP_CLICK_PROXIMITY_MS,
     PICKUP_SILENCE_BEFORE_MS,
 )
@@ -133,7 +137,19 @@ def _detect_pickup_candidates(
     spoken_tokens: list,
     issue_records: list[dict],
 ) -> list[dict]:
-    """Detect pickup candidates from VAD + audio signals without text match."""
+    """Detect pickup candidates from VAD + audio signals without text match.
+    
+    CORROBORATION-FIRST LOGIC:
+    Pickup candidates from pure audio signals are treated as secondary issues
+    unless they meet stricter thresholds. This reduces false positives from
+    technically plausible but editorially non-useful signal artifacts.
+    
+    Requirements for PRIMARY pickup_candidate:
+    - DUAL_SIGNAL: Both click and cutoff detected, OR
+    - HIGH_CONFIDENCE: Confidence >= PICKUP_CANDIDATE_MIN_CONFIDENCE_FOR_PRIMARY
+    
+    Otherwise, the issue is marked is_secondary=True and given lower priority.
+    """
     new_issues: list[dict] = []
     existing_ranges = [(i["start_ms"], i["end_ms"]) for i in issue_records]
 
@@ -147,7 +163,11 @@ def _detect_pickup_candidates(
         nearby_clicks = _find_signals_near(audio_signals, seg["start_ms"], seg["start_ms"], PICKUP_CLICK_PROXIMITY_MS)
         has_click = any(s["signal_type"] == "click_marker" for s in nearby_clicks)
         has_cutoff = any(s["signal_type"] == "abrupt_cutoff" for s in nearby_clicks)
+        has_onset = any(s["signal_type"] == "onset_burst" for s in nearby_clicks)
 
+        # TIGHTENED LOGIC: Require at least one strong signal for consideration
+        # Previously: only required click OR cutoff
+        # Now: require at least one, but dual signals boost confidence significantly
         if not (has_click or has_cutoff):
             continue
 
@@ -159,13 +179,59 @@ def _detect_pickup_candidates(
         if already_covered:
             continue
 
+        # TIGHTENED CONFIDENCE CALCULATION
+        # Base confidence is lower, but dual signals can push it higher
         confidence = PICKUP_CANDIDATE_BASE_CONFIDENCE
-        if has_click:
-            confidence += 0.15
-        if has_cutoff:
-            confidence += 0.15
-        if gap_before > 500:
+        corroboration_reasons: list[str] = []
+        
+        # DUAL_SIGNAL requirement: both click AND cutoff = stronger evidence
+        has_dual_signal = has_click and has_cutoff
+        if has_dual_signal:
+            confidence += 0.25  # Significant boost for dual signals
+            corroboration_reasons.append("dual_signal")
+        elif has_click:
+            confidence += 0.10  # Reduced from 0.15 for single click
+            corroboration_reasons.append("click_only")
+        elif has_cutoff:
+            confidence += 0.10  # Reduced from 0.15 for single cutoff
+            corroboration_reasons.append("cutoff_only")
+        
+        # Additional onset burst is corroborating evidence
+        if has_onset:
+            confidence += 0.08
+            corroboration_reasons.append("onset_burst")
+        
+        # TIGHTENED: Silence must be longer for a boost
+        if gap_before > PICKUP_CANDIDATE_SILENCE_BOOST_MS:
             confidence += 0.10
+            corroboration_reasons.append("long_silence")
+        elif gap_before > 500:
+            confidence += 0.05  # Reduced from 0.10
+
+        # CORROBORATION-FIRST: Determine if this is a primary or secondary issue
+        # Pure signal artifacts without strong evidence are secondary/low-priority
+        is_secondary = True
+        demotion_reason = None
+        
+        if has_dual_signal:
+            # Dual signals = strong corroboration, can be primary
+            is_secondary = False
+        elif confidence >= PICKUP_CANDIDATE_MIN_CONFIDENCE_FOR_PRIMARY:
+            # High confidence from other factors = can be primary
+            is_secondary = False
+        else:
+            # Pure single-signal artifact = secondary (low priority)
+            demotion_reason = (
+                "Pure signal artifact without corroborating evidence. "
+                f"Confidence {confidence:.2f} < {PICKUP_CANDIDATE_MIN_CONFIDENCE_FOR_PRIMARY:.2f} threshold. "
+                "Requires text mismatch, repeat/restart structure, or dual signals for primary status."
+            )
+
+        note = f"VAD gap={gap_before}ms, click={has_click}, cutoff={has_cutoff}"
+        if corroboration_reasons:
+            note += f", corroboration=[{', '.join(corroboration_reasons)}]"
+        if demotion_reason:
+            note += f". SECONDARY: {demotion_reason}"
 
         new_issues.append({
             "type": "pickup_candidate",
@@ -176,15 +242,29 @@ def _detect_pickup_candidates(
             "spoken_text": "",
             "context_before": "",
             "context_after": "",
-            "note": f"VAD gap={gap_before}ms, click={has_click}, cutoff={has_cutoff}",
+            "note": note,
             "status": "needs_manual",
+            # NEW: Mark secondary issues explicitly
+            "is_secondary": is_secondary,
         })
 
     return new_issues
 
 
 def _detect_non_speech_markers(audio_signals: list[dict], vad_segments: list[dict]) -> list[dict]:
-    """Detect non-speech markers (clicks/claps outside speech regions)."""
+    """Detect non-speech markers (clicks/claps outside speech regions).
+    
+    NON-SPEECH MARKER DEMOTION:
+    Non-speech markers are useful for debugging and specialized review,
+    but are NOT editorially useful enough to deserve equal prominence.
+    They are treated as SECONDARY issues by default:
+    - Available in the full issue list for completeness
+    - Lower visibility in editor-facing views
+    - Do not trigger high-priority recommendations
+    
+    Rationale: A click/clap outside speech doesn't directly affect narration
+    quality. Editors typically only care if it interferes with usable audio.
+    """
     new_issues: list[dict] = []
     for sig in audio_signals:
         if sig["signal_type"] != "click_marker":
@@ -196,6 +276,10 @@ def _detect_non_speech_markers(audio_signals: list[dict], vad_segments: list[dic
             for v in vad_segments
         )
         if not in_speech:
+            note = f"Non-speech click/marker: {sig.get('note', '')}"
+            if NON_SPEECH_MARKER_IS_SECONDARY:
+                note += " SECONDARY: Non-speech markers are low-priority by default."
+            
             new_issues.append({
                 "type": "non_speech_marker",
                 "start_ms": sig["start_ms"],
@@ -205,8 +289,10 @@ def _detect_non_speech_markers(audio_signals: list[dict], vad_segments: list[dic
                 "spoken_text": "",
                 "context_before": "",
                 "context_after": "",
-                "note": f"Non-speech click/marker: {sig.get('note', '')}",
+                "note": note,
                 "status": "needs_manual",
+                # NEW: Mark as secondary by default (configurable via NON_SPEECH_MARKER_IS_SECONDARY)
+                "is_secondary": NON_SPEECH_MARKER_IS_SECONDARY,
             })
     return new_issues
 

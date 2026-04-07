@@ -109,6 +109,8 @@ def test_recommendation_fields():
     assert "confidence" in rec
     assert "related_issue_ids" in rec
     assert "ambiguity_flags" in rec
+    # NEW: is_secondary field should be present
+    assert "is_secondary" in rec
 
 
 # Tests for the action to model_action mapping
@@ -119,5 +121,68 @@ def test_map_action_to_model_action():
     assert map_action_to_model_action("review_mistake") == "review"
     assert map_action_to_model_action("manual_review_required") == "review"
     assert map_action_to_model_action("no_action") == "ignore"
+    # NEW: secondary_signal maps to ignore
+    assert map_action_to_model_action("secondary_signal") == "ignore"
     # Unknown action defaults to review
     assert map_action_to_model_action("unknown_action") == "review"
+
+
+# === CORROBORATION-FIRST TESTS ===
+
+def test_secondary_issue_gets_demoted():
+    """Secondary issues should get secondary_signal action and info priority."""
+    rec = generate_recommendation(
+        _scores(pickup=0.9, mistake=0.8),  # Would normally be high priority
+        is_secondary=True,
+        issue_type="pickup_candidate"
+    )
+    assert rec["action"] == "secondary_signal"
+    assert rec["model_action"] == "ignore"
+    assert rec["priority"] == "info"
+    assert rec["is_secondary"] is True
+    assert "Secondary" in rec["reasoning"]
+
+
+def test_secondary_non_speech_marker_demoted():
+    """Non-speech markers should be demoted via is_secondary."""
+    rec = generate_recommendation(
+        _scores(pickup=0.2, mistake=0.1),
+        is_secondary=True,
+        issue_type="non_speech_marker"
+    )
+    assert rec["action"] == "secondary_signal"
+    assert rec["model_action"] == "ignore"
+    assert rec["priority"] == "info"
+    assert "non_speech_marker" in rec["reasoning"]
+
+
+def test_secondary_overrides_all_other_priorities():
+    """is_secondary=True should take precedence over all other logic."""
+    # Even with high mistake and pickup scores, secondary should win
+    rec = generate_recommendation(
+        _scores(mistake=0.95, pickup=0.95, splice=0.95, splice_conf=0.95),
+        alt_take_member_count=5,  # Would normally trigger alt_take_available
+        is_secondary=True,
+        issue_type="pickup_candidate"
+    )
+    assert rec["action"] == "secondary_signal"
+    assert rec["priority"] == "info"
+
+
+def test_non_secondary_issue_normal_processing():
+    """Non-secondary issues should follow normal recommendation logic."""
+    rec = generate_recommendation(
+        _scores(mistake=0.85),  # > 0.8 for critical priority
+        is_secondary=False,
+        issue_type="substitution"
+    )
+    assert rec["action"] == "review_mistake"
+    assert rec["priority"] == "critical"  # mistake > 0.8 = critical
+    assert rec["is_secondary"] is False
+
+
+def test_default_is_secondary_false():
+    """Without is_secondary parameter, issues are treated as primary."""
+    rec = generate_recommendation(_scores(pickup=0.7))
+    assert rec["is_secondary"] is False
+    assert rec["action"] == "likely_pickup"

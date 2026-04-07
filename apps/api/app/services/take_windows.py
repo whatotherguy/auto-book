@@ -294,11 +294,12 @@ def adjust_for_overlapping_takes(
 
             # If our playback_start overlaps with prev's content, trim it
             if adjusted_window["playback_start_ms"] < prev_content_end:
-                # Set playback start to midpoint between takes
+                # Set playback start to midpoint between takes,
+                # but never push it past our own content_start
                 midpoint = (prev_content_end + curr_content_start) // 2
-                adjusted_window["playback_start_ms"] = max(
+                adjusted_window["playback_start_ms"] = min(
                     midpoint,
-                    adjusted_window["content_start_ms"]  # Never trim into our content
+                    curr_content_start  # Never skip past our content
                 )
 
         # Check overlap with next take
@@ -309,11 +310,12 @@ def adjust_for_overlapping_takes(
 
             # If our playback_end overlaps with next's content, trim it
             if adjusted_window["playback_end_ms"] > next_content_start:
-                # Set playback end to midpoint between takes
+                # Set playback end to midpoint between takes,
+                # but never trim below our own content_end
                 midpoint = (curr_content_end + next_content_start) // 2
                 adjusted_window["playback_end_ms"] = max(
                     midpoint,
-                    adjusted_window["content_end_ms"]  # Never trim into our content
+                    curr_content_end  # Never trim into our content
                 )
 
         adjusted.append(adjusted_window)

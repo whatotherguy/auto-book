@@ -217,6 +217,56 @@ class TestAdjustForOverlappingTakes:
         # Second take's playback_start should be trimmed
         assert result[1]["playback_start_ms"] >= 2000
 
+    def test_overlapping_trimmed_to_midpoint(self):
+        """Verify overlapping takes are trimmed to midpoint between content regions."""
+        windows = [
+            {
+                "issue_index": 0,
+                "content_start_ms": 1000,
+                "content_end_ms": 2000,
+                "playback_start_ms": 500,
+                "playback_end_ms": 3000,  # Overlaps with next content
+            },
+            {
+                "issue_index": 1,
+                "content_start_ms": 2600,
+                "content_end_ms": 3600,
+                "playback_start_ms": 1500,  # Overlaps with prev content
+                "playback_end_ms": 4100,
+            },
+        ]
+        result = adjust_for_overlapping_takes(windows)
+        # Midpoint between 2000 and 2600 is 2300
+        # First take's playback_end: max(2300, 2000) = 2300
+        assert result[0]["playback_end_ms"] == 2300
+        # Second take's playback_start: min(2300, 2600) = 2300
+        assert result[1]["playback_start_ms"] == 2300
+
+    def test_overlapping_respects_content_bounds(self):
+        """When midpoint would cut into content, respect content bounds."""
+        windows = [
+            {
+                "issue_index": 0,
+                "content_start_ms": 1000,
+                "content_end_ms": 2400,  # Content ends close to next
+                "playback_start_ms": 500,
+                "playback_end_ms": 3000,
+            },
+            {
+                "issue_index": 1,
+                "content_start_ms": 2500,  # Content starts close to prev
+                "content_end_ms": 3500,
+                "playback_start_ms": 2000,
+                "playback_end_ms": 4000,
+            },
+        ]
+        result = adjust_for_overlapping_takes(windows)
+        # Midpoint = (2400 + 2500) / 2 = 2450
+        # First take's playback_end: max(2450, 2400) = 2450
+        assert result[0]["playback_end_ms"] == 2450
+        # Second take's playback_start: min(2450, 2500) = 2450
+        assert result[1]["playback_start_ms"] == 2450
+
 
 class TestEdgeCases:
     def test_zero_duration_content(self):

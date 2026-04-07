@@ -185,13 +185,13 @@ export function IssueDetail({
         <span className="pill">
           {formatTimecode(issue.start_ms)} to {formatTimecode(issue.end_ms)}
         </span>
-        {issue.alt_take_cluster_id != null ? (
+        {issue.alt_take_cluster_id != null || issue.recommendation?.model_action === "compare_takes" ? (
           <span className="pill pill-cluster" title="This issue is part of an alternate-take cluster">
             ⇄ Compare Takes
           </span>
         ) : null}
       </div>
-      {issue.alt_take_cluster_id != null ? (
+      {issue.alt_take_cluster_id != null || issue.recommendation?.model_action === "compare_takes" ? (
         <p className="muted" style={{ margin: "4px 0 8px", fontSize: "0.9em" }}>
           <strong>Original trigger:</strong> {humanize(issue.type)}
         </p>

@@ -102,7 +102,8 @@ def build_cut_plan(issues: Iterable[Issue], duration_ms: int) -> list[tuple[int,
             continue
 
         issue_type = getattr(issue, "type", "")
-        if issue_type not in CUTTABLE_ISSUE_TYPES:
+        is_alt_take_member = getattr(issue, "alt_take_cluster_id", None) is not None
+        if issue_type not in CUTTABLE_ISSUE_TYPES and not is_alt_take_member:
             continue
 
         start_ms = max(0, int(getattr(issue, "start_ms", 0)))

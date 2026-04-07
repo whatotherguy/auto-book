@@ -293,7 +293,31 @@ def test_get_prosody_for_range_aggregates_multiple_tokens():
     assert result["pause_after_ms"] == 80
 
 
-def test_get_prosody_for_range_partial_overlap():
+def test_get_prosody_for_range_speech_rate_is_duration_weighted():
+    """speech_rate_wps uses duration-weighted mean, not a simple average.
+
+    Token A: 100 ms, 1.0 wps  (slow, short)
+    Token B: 900 ms, 3.0 wps  (fast, long)
+    Simple mean = 2.0; duration-weighted = (1.0*100 + 3.0*900) / 1000 = 2.8
+    """
+    tokens = [_make_token(0, 100), _make_token(100, 1000)]
+    prosody_map = [
+        {"duration_ms": 100, "speech_rate_wps": 1.0, "f0_mean_hz": None,
+         "f0_std_hz": None, "f0_contour": [], "energy_contour": [],
+         "pause_before_ms": 0, "pause_after_ms": 0},
+        {"duration_ms": 900, "speech_rate_wps": 3.0, "f0_mean_hz": None,
+         "f0_std_hz": None, "f0_contour": [], "energy_contour": [],
+         "pause_before_ms": 0, "pause_after_ms": 0},
+    ]
+    result = _get_prosody_for_range(prosody_map, tokens, 0, 1000)
+    assert result is not None
+    expected = (1.0 * 100 + 3.0 * 900) / 1000  # 2.8
+    assert abs(result["speech_rate_wps"] - expected) < 1e-9
+    # Confirm it is NOT the simple unweighted mean (2.0)
+    assert abs(result["speech_rate_wps"] - 2.0) > 0.1
+
+
+
     """Only a subset of tokens overlap the query range; aggregate only those."""
     tokens = [_make_token(0, 300), _make_token(300, 600), _make_token(600, 900)]
     prosody_map = [
@@ -349,7 +373,8 @@ def test_get_prosody_for_range_float_timestamps():
     result = _get_prosody_for_range(prosody_map, tokens, 100, 800)
     assert result is not None
     assert result["duration_ms"] == 700
-    assert abs(result["speech_rate_wps"] - 2.5) < 1e-9
+    # Duration-weighted rate: (2.0*300 + 3.0*400) / 700 = 1800/700
+    assert abs(result["speech_rate_wps"] - 1800 / 700) < 1e-9
     assert abs(result["f0_mean_hz"] - 140.0) < 1e-9
 
 

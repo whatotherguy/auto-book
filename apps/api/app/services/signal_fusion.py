@@ -75,8 +75,19 @@ def _get_prosody_for_range(prosody_map: list[dict], spoken_tokens: list, start_m
     # Aggregate over all overlapping entries
     duration_ms = sum(p.get("duration_ms", 0) for p in matching)
 
-    rate_values = [p["speech_rate_wps"] for p in matching if p.get("speech_rate_wps") is not None]
-    speech_rate_wps = sum(rate_values) / len(rate_values) if rate_values else 0.0
+    # Duration-weighted mean: equivalent to total_words / total_duration_s, because
+    # per-token speech_rate_wps = word_count / (duration_ms / 1000).
+    weighted_rate_sum = sum(
+        p["speech_rate_wps"] * p.get("duration_ms", 0)
+        for p in matching
+        if p.get("speech_rate_wps") is not None
+    )
+    rate_duration_sum = sum(
+        p.get("duration_ms", 0)
+        for p in matching
+        if p.get("speech_rate_wps") is not None
+    )
+    speech_rate_wps = weighted_rate_sum / rate_duration_sum if rate_duration_sum > 0 else 0.0
 
     f0_means = [p["f0_mean_hz"] for p in matching if p.get("f0_mean_hz") is not None]
     f0_mean_hz = sum(f0_means) / len(f0_means) if f0_means else None

@@ -160,7 +160,11 @@ def parse_optional_int(raw_value: str | None) -> int | None:
     if raw_value is None or raw_value.strip() == "":
         return None
 
-    return int(raw_value)
+    try:
+        return int(raw_value)
+    except ValueError:
+        logger.warning("Expected an integer value but got '%s'; ignoring.", raw_value)
+        return None
 
 
 def build_model_candidates(configured_model_name: str | None, fallback_model_name: str, profile: str, device: str) -> tuple[str, ...]:

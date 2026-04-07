@@ -69,7 +69,9 @@ def get_chapter_issue_stats(chapter_id: int, session: Session = Depends(get_sess
     total = sum(status_counts.values())
     # Use new review_state for reviewed count, fallback to legacy status
     reviewed = review_state_counts.get("reviewed", 0)
-    # If no issues have the new review_state yet, fall back to legacy calculation
+    # MIGRATION SUPPORT: If no issues have the new review_state yet (pre-migration data),
+    # fall back to legacy calculation based on approved/rejected status.
+    # This fallback can be removed once all data has been migrated to use review_state.
     if reviewed == 0 and total > 0:
         reviewed = status_counts.get("approved", 0) + status_counts.get("rejected", 0)
 

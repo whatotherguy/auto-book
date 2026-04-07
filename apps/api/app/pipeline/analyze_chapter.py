@@ -151,6 +151,8 @@ def run_analysis(
         alt_take_clusters = detect_alt_takes(
             issue_records, manuscript_tokens, spoken_tokens,
             alignment, prosody_map,
+            vad_segments=vad_segments,
+            audio_duration_ms=chapter.duration_ms,
         )
         write_json_artifact(dirs["analysis"] / "alt_take_clusters.json", alt_take_clusters)
 

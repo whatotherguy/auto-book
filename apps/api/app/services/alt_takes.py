@@ -1,4 +1,20 @@
-"""Alt-take clustering: group overlapping manuscript-span issues into clusters."""
+"""Alt-take clustering: group overlapping manuscript-span issues into clusters.
+
+This module groups issues that cover the same manuscript text span into
+alt-take clusters for comparison by the editor. Each cluster member includes:
+
+- issue_index / issue_id: reference to the original issue
+- take_order: position in chronological order
+- content_start_ms / content_end_ms: detected core phrase bounds (issue start/end)
+- playback_start_ms / playback_end_ms: padded review window for listening
+
+The playback bounds are computed by the take_windows module to provide
+editor-friendly audio sample windows that:
+- Include padding around the detected content
+- Snap to VAD speech boundaries when possible
+- Avoid clipping the spoken take
+- Handle edge cases (file boundaries, overlapping takes)
+"""
 
 from __future__ import annotations
 
@@ -11,6 +27,10 @@ from ..detection_config import (
     ALT_TAKE_MIN_TEXT_OVERLAP,
     PERFORMANCE_VARIANT_F0_DIFF_HZ,
     PERFORMANCE_VARIANT_RATE_DIFF,
+)
+from .take_windows import (
+    compute_take_playback_windows,
+    adjust_for_overlapping_takes,
 )
 
 logger = logging.getLogger(__name__)
@@ -131,8 +151,29 @@ def detect_alt_takes(
     spoken_tokens: Sequence,
     alignment: dict[str, Any],
     prosody_map: list[dict[str, Any]],
+    vad_segments: Sequence[dict[str, Any]] | None = None,
+    audio_duration_ms: int | None = None,
 ) -> list[dict[str, Any]]:
-    """Group overlapping manuscript-span issues into alt-take clusters."""
+    """Group overlapping manuscript-span issues into alt-take clusters.
+
+    Each cluster member includes:
+    - issue_index / issue_id: reference to the original issue
+    - take_order: position in chronological order
+    - content_start_ms / content_end_ms: detected core phrase bounds
+    - playback_start_ms / playback_end_ms: padded review window for listening
+
+    Args:
+        issue_records: List of detected issues
+        manuscript_tokens: Tokenized manuscript text
+        spoken_tokens: Tokenized spoken/transcribed text
+        alignment: Alignment between manuscript and spoken tokens
+        prosody_map: Prosody features per token
+        vad_segments: Optional VAD speech segments for playback window snapping
+        audio_duration_ms: Optional audio duration for clamping playback bounds
+
+    Returns:
+        List of alt-take cluster dicts with members containing timing info
+    """
     logger.info("Detecting alt-takes from %d issues", len(issue_records))
 
     # Map each issue to its manuscript range
@@ -204,13 +245,49 @@ def detect_alt_takes(
             if issue.get("type") not in ("performance_variant",):
                 issue["type"] = "alt_take"
 
+        # Get sorted cluster members by time
+        sorted_cluster = sorted(cluster, key=lambda x: x[1].get("start_ms", 0))
+        cluster_member_indices = [idx for idx, _, _ in sorted_cluster]
+
+        # Compute playback windows for all cluster members
+        playback_windows = compute_take_playback_windows(
+            issue_records,
+            cluster_member_indices,
+            vad_segments=vad_segments,
+            audio_duration_ms=audio_duration_ms,
+        )
+
+        # Adjust for overlapping takes
+        playback_windows = adjust_for_overlapping_takes(playback_windows)
+
+        # Build member list with timing info
         members = []
-        for order, (idx, issue, _) in enumerate(sorted(cluster, key=lambda x: x[1].get("start_ms", 0))):
-            members.append({
+        for order, (idx, issue, _) in enumerate(sorted_cluster):
+            # Find the corresponding playback window
+            window = next(
+                (w for w in playback_windows if w["issue_index"] == idx),
+                None
+            )
+
+            member = {
                 "issue_index": idx,
                 "issue_id": issue.get("id"),
                 "take_order": order,
-            })
+                # Content bounds = raw issue timing (detected core phrase)
+                "content_start_ms": issue.get("start_ms", 0),
+                "content_end_ms": issue.get("end_ms", 0),
+            }
+
+            # Add playback bounds if computed
+            if window:
+                member["playback_start_ms"] = window["playback_start_ms"]
+                member["playback_end_ms"] = window["playback_end_ms"]
+            else:
+                # Fallback: use content bounds as playback bounds
+                member["playback_start_ms"] = member["content_start_ms"]
+                member["playback_end_ms"] = member["content_end_ms"]
+
+            members.append(member)
 
         confidence = min(1.0, len(cluster) * 0.3 + 0.2)
 

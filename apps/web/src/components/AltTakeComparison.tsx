@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from "react"
-import { AltTakeCluster, Issue } from "../types"
+import { AltTakeCluster, AltTakeMember, Issue } from "../types"
 import { formatTimecode } from "../utils"
 
 type AltTakeComparisonProps = {
@@ -29,9 +29,9 @@ export function AltTakeComparison({
   const memberIssues = cluster.members
     .map((m) => {
       const issue = issues.find((i) => i.id === m.issue_id)
-      return issue ? { issue, takeOrder: m.take_order } : null
+      return issue ? { issue, takeOrder: m.take_order, member: m } : null
     })
-    .filter((entry): entry is { issue: Issue; takeOrder: number } => entry != null)
+    .filter((entry): entry is { issue: Issue; takeOrder: number; member: typeof cluster.members[0] } => entry != null)
     .sort((a, b) => a.takeOrder - b.takeOrder)
 
   const ranking = cluster.ranking
@@ -79,7 +79,7 @@ export function AltTakeComparison({
     }
   }, [])
 
-  function playTake(issue: Issue) {
+  function playTake(issue: Issue, member: AltTakeMember) {
     if (!audioUrl) return
 
     if (playingId === issue.id) {
@@ -95,8 +95,12 @@ export function AltTakeComparison({
     }
     const audio = audioRef.current
 
-    const startTime = issue.start_ms / 1000
-    endTimeRef.current = issue.end_ms / 1000
+    // Use playback bounds from member if available, otherwise fall back to issue bounds
+    const playbackStart = member.playback_start_ms ?? issue.start_ms
+    const playbackEnd = member.playback_end_ms ?? issue.end_ms
+
+    const startTime = playbackStart / 1000
+    endTimeRef.current = playbackEnd / 1000
 
     setPlayingId(issue.id)
     window.dispatchEvent(new CustomEvent("alt-take-playing"))
@@ -145,7 +149,7 @@ export function AltTakeComparison({
         </div>
 
         <div className="alt-compare-grid">
-          {memberIssues.map(({ issue, takeOrder }) => {
+          {memberIssues.map(({ issue, takeOrder, member }) => {
             const isPreferred = cluster.preferred_issue_id === issue.id
             const isCurrentlyPlaying = playingId === issue.id
             const rankedTake = ranking?.ranked_takes?.find((t) => t.issue_id === issue.id)
@@ -199,7 +203,7 @@ export function AltTakeComparison({
                   <button
                     type="button"
                     className={`alt-compare-play-btn${isCurrentlyPlaying ? " playing" : ""}`}
-                    onClick={() => playTake(issue)}
+                    onClick={() => playTake(issue, member)}
                     disabled={!audioUrl}
                   >
                     {isCurrentlyPlaying ? "\u23F8 Pause" : "\u25B6 Listen"}

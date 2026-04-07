@@ -162,6 +162,12 @@ export type AltTakeMember = {
   cluster_id: number
   issue_id: number
   take_order: number
+  // Content bounds = detected core phrase/problem region (from issue start_ms/end_ms)
+  content_start_ms?: number
+  content_end_ms?: number
+  // Playback bounds = padded review window for listening
+  playback_start_ms?: number
+  playback_end_ms?: number
 }
 
 export type Issue = {

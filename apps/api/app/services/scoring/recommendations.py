@@ -4,6 +4,21 @@ from __future__ import annotations
 
 from typing import Any
 
+# Map internal recommendation actions to editor-facing model_action values
+_ACTION_TO_MODEL_ACTION = {
+    "safe_auto_cut": "safe_cut",
+    "alt_take_available": "compare_takes",
+    "likely_pickup": "review",
+    "review_mistake": "review",
+    "manual_review_required": "review",
+    "no_action": "ignore",
+}
+
+
+def map_action_to_model_action(action: str) -> str:
+    """Convert internal recommendation action to editor-facing model_action."""
+    return _ACTION_TO_MODEL_ACTION.get(action, "review")
+
 
 def generate_recommendation(
     composite_scores: dict[str, Any],
@@ -109,6 +124,8 @@ def _make_recommendation(
 ) -> dict[str, Any]:
     return {
         "action": action,
+        # model_action is the editor-facing action value
+        "model_action": map_action_to_model_action(action),
         "priority": priority,
         "reasoning": reasoning,
         "confidence": round(confidence, 4),

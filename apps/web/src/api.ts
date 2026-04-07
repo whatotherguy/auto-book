@@ -1,4 +1,4 @@
-import { AcxCheck, AltTakeCluster, AnalysisJob, AppSettings, AudioSignalRecord, Chapter, HealthStatus, Issue, Project, TranscriptionMode, VadSegmentRecord } from "./types"
+import { AcxCheck, AltTakeCluster, AnalysisJob, AppSettings, AudioSignalRecord, Chapter, EditorDecision, HealthStatus, Issue, Project, ReviewState, TranscriptionMode, VadSegmentRecord } from "./types"
 
 const API_BASE = import.meta.env.VITE_API_BASE ?? "http://localhost:8000"
 
@@ -162,10 +162,22 @@ export function getIssueStats(chapterId: number) {
     by_status: Record<string, number>
     by_type: Record<string, number>
     by_confidence: { high: number; medium: number; low: number }
+    // New v2 fields
+    by_review_state?: Record<string, number>
+    by_editor_decision?: Record<string, number>
+    by_model_action?: Record<string, number>
   }>(`/chapters/${chapterId}/issues/stats`)
 }
 
-export function batchUpdateIssues(issueIds: number[], payload: { status?: Issue["status"]; note?: string }) {
+export function batchUpdateIssues(
+  issueIds: number[],
+  payload: {
+    status?: Issue["status"] | null
+    editor_decision?: EditorDecision | null
+    review_state?: ReviewState | null
+    note?: string | null
+  }
+) {
   return fetchJson<Issue[]>("/issues/batch-update", {
     method: "POST",
     headers: { "Content-Type": "application/json" },
@@ -288,7 +300,10 @@ export function getSpokenTokens(chapterId: number) {
   return fetchJson<any[]>(`/chapters/${chapterId}/spoken-tokens`)
 }
 
-export function updateIssue(issueId: number, payload: Partial<Pick<Issue, "status" | "note" | "start_ms" | "end_ms">>) {
+export function updateIssue(
+  issueId: number,
+  payload: Partial<Pick<Issue, "status" | "editor_decision" | "review_state" | "note" | "start_ms" | "end_ms">>
+) {
   return fetchJson<Issue>(`/issues/${issueId}`, {
     method: "PATCH",
     headers: { "Content-Type": "application/json" },

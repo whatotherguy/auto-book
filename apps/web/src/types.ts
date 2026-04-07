@@ -26,7 +26,13 @@ export type Chapter = {
   analysis_artifact_updated_at?: number | null
 }
 
-export type IssueStatus = "approved" | "rejected" | "needs_manual"
+// Legacy status type (deprecated - use EditorDecision and ReviewState)
+export type IssueStatus = "approved" | "rejected" | "needs_manual" | "pending"
+
+// New v2 review decision model types
+export type EditorDecision = "cut" | "keep" | "needs_review"
+export type ModelAction = "safe_cut" | "compare_takes" | "review" | "ignore"
+export type ReviewState = "unreviewed" | "reviewed"
 
 export type AudioFeatures = {
   rms_db: number
@@ -88,6 +94,8 @@ export type CompositeScores = {
 export type EditorialRecommendation = {
   action: 'review_mistake' | 'likely_pickup' | 'alt_take_available'
         | 'safe_auto_cut' | 'manual_review_required' | 'no_action'
+  // model_action is the editor-facing action value
+  model_action: ModelAction
   priority: 'critical' | 'high' | 'medium' | 'low' | 'info'
   reasoning: string
   confidence: number
@@ -168,7 +176,13 @@ export type Issue = {
   context_before: string
   context_after: string
   note?: string | null
+  // Legacy status field (deprecated)
   status: IssueStatus
+  // New v2 review decision fields
+  editor_decision?: EditorDecision | null
+  model_action?: ModelAction | null
+  review_state: ReviewState
+  // Other fields
   triage_verdict?: string | null
   triage_reason?: string | null
   audio_features?: AudioFeatures | null

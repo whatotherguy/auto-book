@@ -558,6 +558,8 @@ def persist_issue_models(session: Session, chapter_id: int, issue_records: Seque
     for issue_record in issue_records:
         confidence = float(issue_record.get("confidence", 0.0))
         status = str(issue_record.get("status") or _default_issue_status(confidence))
+        # Get model_action from the issue record (set by scoring pipeline)
+        model_action = issue_record.get("model_action")
         issue = Issue(
             chapter_id=chapter_id,
             type=str(issue_record.get("type", "uncertain_alignment")),
@@ -570,6 +572,7 @@ def persist_issue_models(session: Session, chapter_id: int, issue_records: Seque
             context_after=str(issue_record.get("context_after", "")),
             note=issue_record.get("note"),
             status=status,
+            model_action=model_action,
             audio_features_json=issue_record.get("audio_features_json"),
             audio_signals_json=issue_record.get("audio_signals_json"),
             prosody_features_json=issue_record.get("prosody_features_json"),

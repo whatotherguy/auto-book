@@ -1,6 +1,13 @@
 from typing import Literal, Optional
 from pydantic import BaseModel, Field, model_validator
 
+# New decision/state types for v2 review model
+EditorDecision = Literal["cut", "keep", "needs_review"]
+ModelAction = Literal["safe_cut", "compare_takes", "review", "ignore"]
+ReviewState = Literal["unreviewed", "reviewed"]
+# Legacy status type (deprecated)
+LegacyStatus = Literal["approved", "rejected", "needs_manual", "pending"]
+
 
 class ProjectCreate(BaseModel):
     name: str
@@ -29,7 +36,12 @@ class AnalyzeChapterRequest(BaseModel):
 
 
 class IssueUpdate(BaseModel):
-    status: Optional[Literal["approved", "rejected", "needs_manual"]] = None
+    # Legacy status field (deprecated, kept for compatibility)
+    status: Optional[LegacyStatus] = None
+    # New v2 decision fields
+    editor_decision: Optional[EditorDecision] = None
+    review_state: Optional[ReviewState] = None
+    # Other fields
     note: Optional[str] = None
     start_ms: Optional[int] = None
     end_ms: Optional[int] = None
@@ -50,13 +62,23 @@ class IssueUpdate(BaseModel):
 
 class IssueBatchUpdate(BaseModel):
     issue_ids: list[int] = Field(min_length=1)
-    status: Optional[Literal["approved", "rejected", "needs_manual"]] = None
+    # Legacy status field (deprecated, kept for compatibility)
+    status: Optional[LegacyStatus] = None
+    # New v2 decision fields
+    editor_decision: Optional[EditorDecision] = None
+    review_state: Optional[ReviewState] = None
+    # Other fields
     note: Optional[str] = None
 
     @model_validator(mode="after")
     def validate_at_least_one_field(self) -> "IssueBatchUpdate":
-        if self.status is None and self.note is None:
-            raise ValueError("At least one of 'status' or 'note' must be provided")
+        if (
+            self.status is None
+            and self.note is None
+            and self.editor_decision is None
+            and self.review_state is None
+        ):
+            raise ValueError("At least one of 'status', 'editor_decision', 'review_state', or 'note' must be provided")
         return self
 
 

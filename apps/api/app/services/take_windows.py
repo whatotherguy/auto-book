@@ -311,7 +311,7 @@ def adjust_for_overlapping_takes(
             if adjusted_window["playback_end_ms"] > next_content_start:
                 # Set playback end to midpoint between takes
                 midpoint = (curr_content_end + next_content_start) // 2
-                adjusted_window["playback_end_ms"] = min(
+                adjusted_window["playback_end_ms"] = max(
                     midpoint,
                     adjusted_window["content_end_ms"]  # Never trim into our content
                 )

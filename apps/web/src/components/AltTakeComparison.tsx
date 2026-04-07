@@ -31,7 +31,7 @@ export function AltTakeComparison({
       const issue = issues.find((i) => i.id === m.issue_id)
       return issue ? { issue, takeOrder: m.take_order, member: m } : null
     })
-    .filter((entry): entry is { issue: Issue; takeOrder: number; member: typeof cluster.members[0] } => entry != null)
+    .filter((entry): entry is { issue: Issue; takeOrder: number; member: AltTakeMember } => entry != null)
     .sort((a, b) => a.takeOrder - b.takeOrder)
 
   const ranking = cluster.ranking

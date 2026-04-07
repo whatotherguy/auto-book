@@ -37,7 +37,19 @@ def _find_vad_gap_before(vad_segments: list[dict], start_ms: int, max_gap_ms: in
 
 
 def _get_prosody_for_range(prosody_map: list[dict], spoken_tokens: list, start_ms: int, end_ms: int) -> dict | None:
-    """Get prosody features for tokens overlapping a time range."""
+    """Get aggregated prosody features for all tokens overlapping a time range.
+
+    Aggregation rules:
+    - duration_ms: sum of overlapping token durations
+    - speech_rate_wps: mean across overlapping entries
+    - f0_mean_hz: mean of available per-token means (None if none present)
+    - f0_std_hz: mean of available per-token stds (None if none present)
+    - f0_contour: concatenated contours (empty list if unsupported)
+    - energy_contour: concatenated contours (empty list if unsupported)
+    - pause_before_ms: value from the first overlapping entry
+    - pause_after_ms: value from the last overlapping entry
+    """
+    matching: list[dict] = []
     for i, token in enumerate(spoken_tokens):
         t_start = token.get("start_ms", 0)
         if token.get("start") is not None and t_start == 0:
@@ -52,8 +64,58 @@ def _get_prosody_for_range(prosody_map: list[dict], spoken_tokens: list, start_m
             except (TypeError, ValueError):
                 pass
         if t_start <= end_ms and t_end >= start_ms and i < len(prosody_map):
-            return prosody_map[i]
-    return None
+            matching.append(prosody_map[i])
+
+    if not matching:
+        return None
+
+    if len(matching) == 1:
+        return matching[0]
+
+    # Aggregate over all overlapping entries
+    duration_ms = sum(p.get("duration_ms", 0) for p in matching)
+
+    # Duration-weighted mean: equivalent to total_words / total_duration_s, because
+    # per-token speech_rate_wps = word_count / (duration_ms / 1000).
+    weighted_rate_sum = sum(
+        p["speech_rate_wps"] * p.get("duration_ms", 0)
+        for p in matching
+        if p.get("speech_rate_wps") is not None
+    )
+    rate_duration_sum = sum(
+        p.get("duration_ms", 0)
+        for p in matching
+        if p.get("speech_rate_wps") is not None
+    )
+    speech_rate_wps = weighted_rate_sum / rate_duration_sum if rate_duration_sum > 0 else 0.0
+
+    f0_means = [p["f0_mean_hz"] for p in matching if p.get("f0_mean_hz") is not None]
+    f0_mean_hz = sum(f0_means) / len(f0_means) if f0_means else None
+
+    f0_stds = [p["f0_std_hz"] for p in matching if p.get("f0_std_hz") is not None]
+    f0_std_hz = sum(f0_stds) / len(f0_stds) if f0_stds else None
+
+    f0_contour: list = []
+    for p in matching:
+        f0_contour.extend(p.get("f0_contour") or [])
+
+    energy_contour: list = []
+    for p in matching:
+        energy_contour.extend(p.get("energy_contour") or [])
+
+    pause_before_ms = matching[0].get("pause_before_ms", 0)
+    pause_after_ms = matching[-1].get("pause_after_ms", 0)
+
+    return {
+        "duration_ms": duration_ms,
+        "speech_rate_wps": speech_rate_wps,
+        "f0_mean_hz": f0_mean_hz,
+        "f0_std_hz": f0_std_hz,
+        "f0_contour": f0_contour,
+        "energy_contour": energy_contour,
+        "pause_before_ms": pause_before_ms,
+        "pause_after_ms": pause_after_ms,
+    }
 
 
 def _build_audio_features(audio_signals: list[dict], start_ms: int, end_ms: int) -> dict:

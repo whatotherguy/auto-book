@@ -172,15 +172,16 @@ export type RecommendationHeroMeta = {
  * Get display metadata for the recommendation hero badge in the issue detail panel.
  */
 export function getRecommendationHeroMeta(model_action: string | null | undefined): RecommendationHeroMeta {
+  const label = getEditorRecommendation(model_action) || "Needs Review"
   switch (model_action) {
     case "safe_cut":
-      return { label: "Recommended: Cut", icon: "✂", className: "rec-hero-cut" }
+      return { label, icon: "✂", className: "rec-hero-cut" }
     case "ignore":
-      return { label: "Recommended: Keep", icon: "✓", className: "rec-hero-keep" }
+      return { label, icon: "✓", className: "rec-hero-keep" }
     case "compare_takes":
-      return { label: "Compare Takes", icon: "⇄", className: "rec-hero-compare" }
+      return { label, icon: "⇄", className: "rec-hero-compare" }
     default:
-      return { label: "Needs Review", icon: "?", className: "rec-hero-review" }
+      return { label, icon: "?", className: "rec-hero-review" }
   }
 }
 

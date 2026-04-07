@@ -157,9 +157,10 @@ export function IssueDetail({
   }
 
   const modelAction = issue.recommendation?.model_action ?? issue.model_action
-  const heroMeta = getRecommendationHeroMeta(modelAction)
+  const effectiveModelAction = issue.alt_take_cluster_id != null ? "compare_takes" : modelAction
+  const heroMeta = getRecommendationHeroMeta(effectiveModelAction)
   const whyFlagged = getIssueWhyFlagged(issue.type)
-  const recExplanation = getRecommendationExplanation(modelAction)
+  const recExplanation = getRecommendationExplanation(effectiveModelAction)
   const confidenceBand = getConfidenceBand(issue.confidence)
 
   return (
@@ -196,34 +197,38 @@ export function IssueDetail({
       <div className="issue-detail-evidence">
         <div className="issue-detail-meta">
           <span className="pill">{formatIssueStatus(issue.status)}</span>
-          {issue.alt_take_cluster_id != null || modelAction === "compare_takes" ? (
+          {issue.alt_take_cluster_id != null || effectiveModelAction === "compare_takes" ? (
             <span className="pill pill-cluster" title="This issue is part of an alternate-take cluster">
               ⇄ Compare Takes
             </span>
           ) : null}
         </div>
-        {issue.expected_text ? (
-          <div className="evidence-row">
-            <span className="evidence-label">Expected</span>
-            <span className="evidence-value">{issue.expected_text}</span>
-          </div>
-        ) : null}
-        {issue.spoken_text ? (
-          <div className="evidence-row">
-            <span className="evidence-label">Spoken</span>
-            <span className="evidence-value">{issue.spoken_text}</span>
-          </div>
-        ) : null}
-        {(issue.context_before || issue.context_after) ? (
-          <div className="evidence-row evidence-context">
-            <span className="evidence-label">Context</span>
-            <span className="evidence-value">
-              {issue.context_before ? <span className="muted">{issue.context_before} </span> : null}
-              {issue.expected_text ? <mark className="evidence-highlight">{issue.expected_text}</mark> : null}
-              {issue.context_after ? <span className="muted"> {issue.context_after}</span> : null}
-            </span>
-          </div>
-        ) : null}
+        <div className="evidence-row">
+          <span className="evidence-label">Expected</span>
+          <span className="evidence-value">
+            {issue.expected_text.trim() ? issue.expected_text : <span className="muted">None provided</span>}
+          </span>
+        </div>
+        <div className="evidence-row">
+          <span className="evidence-label">Spoken</span>
+          <span className="evidence-value">
+            {issue.spoken_text.trim() ? issue.spoken_text : <span className="muted">None captured</span>}
+          </span>
+        </div>
+        <div className="evidence-row evidence-context">
+          <span className="evidence-label">Context</span>
+          <span className="evidence-value">
+            {issue.context_before.trim() || issue.expected_text.trim() || issue.context_after.trim() ? (
+              <>
+                {issue.context_before.trim() ? <span className="muted">{issue.context_before} </span> : null}
+                {issue.expected_text.trim() ? <mark className="evidence-highlight">{issue.expected_text}</mark> : null}
+                {issue.context_after.trim() ? <span className="muted"> {issue.context_after}</span> : null}
+              </>
+            ) : (
+              <span className="muted">No context provided</span>
+            )}
+          </span>
+        </div>
       </div>
 
       {/* Note editor */}

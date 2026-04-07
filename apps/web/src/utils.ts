@@ -112,6 +112,78 @@ export function getEditorRecommendation(model_action: string | null | undefined)
   }
 }
 
+/**
+ * Plain-language explanation of why an issue type was flagged, for the editor.
+ */
+export function getIssueWhyFlagged(type: string): string {
+  switch (type) {
+    case "false_start":
+      return "The narrator started a phrase and restarted before completing it."
+    case "repetition":
+      return "A word or phrase was said more than once."
+    case "pickup_restart":
+      return "The narrator restarted a phrase — likely re-reading after a stumble."
+    case "substitution":
+      return "A word doesn't match the manuscript — it may need to be re-read."
+    case "missing_text":
+      return "Text from the manuscript appears to have been skipped."
+    case "long_pause":
+      return "An unusually long pause was detected in the narration."
+    case "uncertain_alignment":
+      return "The transcript couldn't be reliably matched to the manuscript here."
+    case "pickup_candidate":
+      return "This may be a pickup take intended to replace a prior issue."
+    case "alt_take":
+      return "Multiple takes of this passage were detected."
+    case "performance_variant":
+      return "The narration differs from the manuscript in phrasing or delivery."
+    case "non_speech_marker":
+      return "A non-speech sound or signal marker was detected."
+    default:
+      return "This passage was flagged for editorial review."
+  }
+}
+
+/**
+ * Plain-language explanation of the model recommendation, for the editor.
+ */
+export function getRecommendationExplanation(model_action: string | null | undefined): string {
+  switch (model_action) {
+    case "safe_cut":
+      return "This looks like a clear mistake — safe to cut."
+    case "ignore":
+      return "This is likely fine. No cut needed."
+    case "compare_takes":
+      return "Multiple takes exist for this passage. Listen and pick the best one."
+    case "review":
+      return "This needs a judgment call. Listen before deciding."
+    default:
+      return ""
+  }
+}
+
+export type RecommendationHeroMeta = {
+  label: string
+  icon: string
+  className: string
+}
+
+/**
+ * Get display metadata for the recommendation hero badge in the issue detail panel.
+ */
+export function getRecommendationHeroMeta(model_action: string | null | undefined): RecommendationHeroMeta {
+  switch (model_action) {
+    case "safe_cut":
+      return { label: "Recommended: Cut", icon: "✂", className: "rec-hero-cut" }
+    case "ignore":
+      return { label: "Recommended: Keep", icon: "✓", className: "rec-hero-keep" }
+    case "compare_takes":
+      return { label: "Compare Takes", icon: "⇄", className: "rec-hero-compare" }
+    default:
+      return { label: "Needs Review", icon: "?", className: "rec-hero-review" }
+  }
+}
+
 // ---------------------------------------------------------------------------
 // UI Bucket grouping
 // ---------------------------------------------------------------------------

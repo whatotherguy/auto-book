@@ -1,5 +1,5 @@
 import { CompositeScores, EditorialRecommendation, Issue, IssueStatus } from "../types"
-import { formatTimecode, getConfidenceBand, getEditorStatusLabel, getEditorRecommendation, humanize, PRIORITY_COLORS } from "../utils"
+import { formatTimecode, getConfidenceBand, getEditorStatusLabel, getEditorRecommendation, getIssueWhyFlagged, getRecommendationExplanation, getRecommendationHeroMeta, humanize, PRIORITY_COLORS } from "../utils"
 import { CollapsibleSection } from "./CollapsibleSection"
 import { useId, useState } from "react"
 import { updateIssue } from "../api"
@@ -20,59 +20,44 @@ function ScoreBar({ label, score }: { label: string; score: number }) {
 }
 
 function ScoringBreakdown({ scores, recommendation }: { scores: CompositeScores; recommendation?: EditorialRecommendation }) {
-  const [open, setOpen] = useState(false)
   const [showAdvanced, setShowAdvanced] = useState(false)
   const editorRec = getEditorRecommendation(recommendation?.model_action)
-  const scoringPanelId = useId()
   const advancedPanelId = useId()
   return (
-    <div style={{ marginTop: 8 }}>
+    <div className="scoring-panel" style={{ marginTop: 0 }}>
+      <ScoreBar label="Mistake" score={scores.mistake_candidate?.score ?? 0} />
+      <ScoreBar label="Pickup" score={scores.pickup_candidate?.score ?? 0} />
+      <ScoreBar label="Continuity" score={scores.continuity_fit?.score ?? 0} />
+      <ScoreBar label="Splice" score={scores.splice_readiness?.score ?? 0} />
+      {recommendation ? (
+        <div className="scoring-recommendation">
+          <p style={{ margin: 0 }}>
+            <strong>AI Recommendation:</strong>{" "}
+            <span style={{ color: PRIORITY_COLORS[recommendation.priority] ?? "inherit" }}>
+              {editorRec || recommendation.action} ({recommendation.priority})
+            </span>
+          </p>
+          <p className="muted" style={{ margin: "2px 0 0", fontSize: "0.85em" }}>{recommendation.reasoning}</p>
+          {scores.mistake_candidate?.ambiguity_flags?.length ? (
+            <p className="scoring-ambiguity">
+              Ambiguity: {scores.mistake_candidate.ambiguity_flags.join("; ")}
+            </p>
+          ) : null}
+        </div>
+      ) : null}
       <button
         type="button"
-        onClick={() => setOpen(!open)}
+        onClick={() => setShowAdvanced(!showAdvanced)}
         className="scoring-toggle"
-        aria-expanded={open}
-        aria-controls={scoringPanelId}
+        style={{ marginTop: 8, fontSize: "0.85em" }}
+        aria-expanded={showAdvanced}
+        aria-controls={advancedPanelId}
       >
-        {open ? "Hide" : "Show"} Scoring Details
+        {showAdvanced ? "Hide" : "Show"} Advanced Debug Scores
       </button>
-      {open ? (
-        <div id={scoringPanelId} className="scoring-panel">
-          <ScoreBar label="Mistake" score={scores.mistake_candidate?.score ?? 0} />
-          <ScoreBar label="Pickup" score={scores.pickup_candidate?.score ?? 0} />
-          <ScoreBar label="Continuity" score={scores.continuity_fit?.score ?? 0} />
-          <ScoreBar label="Splice" score={scores.splice_readiness?.score ?? 0} />
-          {recommendation ? (
-            <div className="scoring-recommendation">
-              <p style={{ margin: 0 }}>
-                <strong>Recommendation:</strong>{" "}
-                <span style={{ color: PRIORITY_COLORS[recommendation.priority] ?? "inherit" }}>
-                  {editorRec || recommendation.action} ({recommendation.priority})
-                </span>
-              </p>
-              <p className="muted" style={{ margin: "2px 0 0", fontSize: "0.85em" }}>{recommendation.reasoning}</p>
-              {scores.mistake_candidate?.ambiguity_flags?.length ? (
-                <p className="scoring-ambiguity">
-                  Ambiguity: {scores.mistake_candidate.ambiguity_flags.join("; ")}
-                </p>
-              ) : null}
-            </div>
-          ) : null}
-          <button
-            type="button"
-            onClick={() => setShowAdvanced(!showAdvanced)}
-            className="scoring-toggle"
-            style={{ marginTop: 8, fontSize: "0.85em" }}
-            aria-expanded={showAdvanced}
-            aria-controls={advancedPanelId}
-          >
-            {showAdvanced ? "Hide" : "Show"} Advanced Debug Scores
-          </button>
-          {showAdvanced ? (
-            <div id={advancedPanelId} style={{ marginTop: 4, opacity: 0.7 }}>
-              <ScoreBar label="Quality (debug)" score={scores.performance_quality?.score ?? 0} />
-            </div>
-          ) : null}
+      {showAdvanced ? (
+        <div id={advancedPanelId} style={{ marginTop: 4, opacity: 0.7 }}>
+          <ScoreBar label="Quality (debug)" score={scores.performance_quality?.score ?? 0} />
         </div>
       ) : null}
     </div>
@@ -171,6 +156,10 @@ export function IssueDetail({
     }
   }
 
+  const modelAction = issue.recommendation?.model_action ?? issue.model_action
+  const heroMeta = getRecommendationHeroMeta(modelAction)
+  const whyFlagged = getIssueWhyFlagged(issue.type)
+  const recExplanation = getRecommendationExplanation(modelAction)
   const confidenceBand = getConfidenceBand(issue.confidence)
 
   return (
@@ -179,42 +168,19 @@ export function IssueDetail({
       subtitle={humanize(issue.type)}
       storageKey="chapter-review:issue-detail"
     >
-      <div className="issue-detail-meta">
-        <span className={`pill ${confidenceBand.className}`}>{confidenceBand.label}</span>
-        <span className="pill">{formatIssueStatus(issue.status)}</span>
-        <span className="pill">
-          {formatTimecode(issue.start_ms)} to {formatTimecode(issue.end_ms)}
-        </span>
-        {issue.alt_take_cluster_id != null || issue.recommendation?.model_action === "compare_takes" ? (
-          <span className="pill pill-cluster" title="This issue is part of an alternate-take cluster">
-            ⇄ Compare Takes
-          </span>
-        ) : null}
+      {/* 1. Recommended action */}
+      <div className={`issue-detail-rec-hero ${heroMeta.className}`}>
+        <span className="rec-hero-icon" aria-hidden="true">{heroMeta.icon}</span>
+        <span className="rec-hero-label">{heroMeta.label}</span>
       </div>
-      {issue.alt_take_cluster_id != null || issue.recommendation?.model_action === "compare_takes" ? (
-        <p className="muted" style={{ margin: "4px 0 8px", fontSize: "0.9em" }}>
-          <strong>Original trigger:</strong> {humanize(issue.type)}
-        </p>
-      ) : null}
-      <p><strong>Confidence Score:</strong> {issue.confidence.toFixed(2)}</p>
-      {issue.triage_verdict ? (
-        <p>
-          <strong>AI Triage:</strong>{" "}
-          <span className={`issue-triage-badge ${issue.triage_verdict}`}>
-            {issue.triage_verdict === "dismiss" ? "Likely false positive" : issue.triage_verdict === "keep" ? "Likely real issue" : "Needs manual review"}
-          </span>
-          {issue.triage_reason ? <span className="muted"> — {issue.triage_reason}</span> : null}
-        </p>
-      ) : null}
-      <p><strong>Expected Text:</strong> {issue.expected_text || "None provided."}</p>
-      <p><strong>Spoken Text:</strong> {issue.spoken_text || "None captured."}</p>
-      <p><strong>Context Before:</strong> {issue.context_before || "None available."}</p>
-      <p><strong>Context After:</strong> {issue.context_after || "None available."}</p>
-      <NoteEditor issue={issue} onSaved={(updated) => onNoteUpdated?.(updated)} />
-      {issue.composite_scores ? (
-        <ScoringBreakdown scores={issue.composite_scores} recommendation={issue.recommendation ?? undefined} />
-      ) : null}
-      <div className="row" aria-live="polite" style={{ marginTop: 12 }}>
+
+      {/* 2. Why it was flagged */}
+      <p className="issue-detail-why">
+        {whyFlagged}{recExplanation ? ` ${recExplanation}` : ""}
+      </p>
+
+      {/* 3. What the editor can do now */}
+      <div className="row issue-detail-actions" aria-live="polite">
         <button className="approve-button" onClick={() => void setStatus("approved")} disabled={isSaving || issue.status === "approved"}>
           {isSaving && issue.status !== "approved" ? "Saving…" : "Keep"}
         </button>
@@ -225,6 +191,71 @@ export function IssueDetail({
           Needs Review
         </button>
       </div>
+
+      {/* 4. Supporting evidence */}
+      <div className="issue-detail-evidence">
+        <div className="issue-detail-meta">
+          <span className="pill">{formatIssueStatus(issue.status)}</span>
+          {issue.alt_take_cluster_id != null || modelAction === "compare_takes" ? (
+            <span className="pill pill-cluster" title="This issue is part of an alternate-take cluster">
+              ⇄ Compare Takes
+            </span>
+          ) : null}
+        </div>
+        {issue.expected_text ? (
+          <div className="evidence-row">
+            <span className="evidence-label">Expected</span>
+            <span className="evidence-value">{issue.expected_text}</span>
+          </div>
+        ) : null}
+        {issue.spoken_text ? (
+          <div className="evidence-row">
+            <span className="evidence-label">Spoken</span>
+            <span className="evidence-value">{issue.spoken_text}</span>
+          </div>
+        ) : null}
+        {(issue.context_before || issue.context_after) ? (
+          <div className="evidence-row evidence-context">
+            <span className="evidence-label">Context</span>
+            <span className="evidence-value">
+              {issue.context_before ? <span className="muted">{issue.context_before} </span> : null}
+              {issue.expected_text ? <mark className="evidence-highlight">{issue.expected_text}</mark> : null}
+              {issue.context_after ? <span className="muted"> {issue.context_after}</span> : null}
+            </span>
+          </div>
+        ) : null}
+      </div>
+
+      {/* Note editor */}
+      <NoteEditor issue={issue} onSaved={(updated) => onNoteUpdated?.(updated)} />
+
+      {/* 5. Advanced technical details (collapsed) */}
+      <CollapsibleSection
+        title="Advanced Details"
+        defaultCollapsed={true}
+        storageKey="chapter-review:issue-detail-advanced"
+        className="issue-detail-advanced"
+      >
+        <div className="issue-detail-meta">
+          <span className={`pill ${confidenceBand.className}`}>{confidenceBand.label}</span>
+          <span className="pill">
+            {formatTimecode(issue.start_ms)} to {formatTimecode(issue.end_ms)}
+          </span>
+        </div>
+        <p><strong>Confidence Score:</strong> {issue.confidence.toFixed(2)}</p>
+        {issue.triage_verdict ? (
+          <p>
+            <strong>AI Triage:</strong>{" "}
+            <span className={`issue-triage-badge ${issue.triage_verdict}`}>
+              {issue.triage_verdict === "dismiss" ? "Likely false positive" : issue.triage_verdict === "keep" ? "Likely real issue" : "Needs manual review"}
+            </span>
+            {issue.triage_reason ? <span className="muted"> — {issue.triage_reason}</span> : null}
+          </p>
+        ) : null}
+        {issue.composite_scores ? (
+          <ScoringBreakdown scores={issue.composite_scores} recommendation={issue.recommendation ?? undefined} />
+        ) : null}
+      </CollapsibleSection>
     </CollapsibleSection>
   )
 }

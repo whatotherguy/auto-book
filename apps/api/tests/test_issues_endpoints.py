@@ -284,3 +284,108 @@ def test_update_issue_needs_review_decision(tmp_path, monkeypatch):
         assert updated["review_state"] == "reviewed"
     finally:
         app.dependency_overrides.clear()
+
+
+def test_editor_decision_overrides_review_state_in_same_payload(tmp_path, monkeypatch):
+    """Verify precedence: when both review_state and editor_decision are in the same payload,
+    editor_decision should win by forcing review_state='reviewed'."""
+    client, engine = _setup_client(tmp_path, monkeypatch)
+    try:
+        chapter_id = _create_chapter(client)
+
+        with Session(engine) as session:
+            issue = Issue(chapter_id=chapter_id, type="repetition", start_ms=0, end_ms=100, confidence=0.9)
+            session.add(issue)
+            session.commit()
+            session.refresh(issue)
+            issue_id = issue.id
+
+        # Send both review_state=unreviewed AND editor_decision=cut in the same request
+        # editor_decision should override, resulting in review_state="reviewed"
+        resp = client.patch(f"/issues/{issue_id}", json={"editor_decision": "cut", "review_state": "unreviewed"})
+        assert resp.status_code == 200
+        updated = resp.json()
+        assert updated["editor_decision"] == "cut"
+        # editor_decision always implies reviewed, overriding the explicit review_state=unreviewed
+        assert updated["review_state"] == "reviewed"
+
+        # Also test batch update with the same conflict
+        with Session(engine) as session:
+            issue2 = Issue(chapter_id=chapter_id, type="false_start", start_ms=200, end_ms=300, confidence=0.8)
+            session.add(issue2)
+            session.commit()
+            session.refresh(issue2)
+            issue2_id = issue2.id
+
+        resp = client.post("/issues/batch-update", json={
+            "issue_ids": [issue2_id],
+            "editor_decision": "keep",
+            "review_state": "unreviewed"
+        })
+        assert resp.status_code == 200
+        updated = resp.json()
+        assert updated[0]["editor_decision"] == "keep"
+        assert updated[0]["review_state"] == "reviewed"
+    finally:
+        app.dependency_overrides.clear()
+
+
+def test_legacy_status_does_not_overwrite_editor_decision(tmp_path, monkeypatch):
+    """Verify that legacy status writes do NOT silently overwrite an existing editor_decision.
+    The editor_decision should remain intact when legacy status is updated."""
+    client, engine = _setup_client(tmp_path, monkeypatch)
+    try:
+        chapter_id = _create_chapter(client)
+
+        with Session(engine) as session:
+            # Create issue with explicit editor_decision already set
+            issue = Issue(
+                chapter_id=chapter_id,
+                type="repetition",
+                start_ms=0,
+                end_ms=100,
+                confidence=0.9,
+                editor_decision="cut",
+                review_state="reviewed"
+            )
+            session.add(issue)
+            session.commit()
+            session.refresh(issue)
+            issue_id = issue.id
+
+        # Update via legacy status field - should NOT clear editor_decision
+        resp = client.patch(f"/issues/{issue_id}", json={"status": "approved"})
+        assert resp.status_code == 200
+        updated = resp.json()
+        assert updated["status"] == "approved"
+        # editor_decision must remain intact
+        assert updated["editor_decision"] == "cut"
+        # review_state should be "reviewed" (both from editor_decision and status=approved mapping)
+        assert updated["review_state"] == "reviewed"
+
+        # Test with status that maps to unreviewed - editor_decision should still remain
+        with Session(engine) as session:
+            issue2 = Issue(
+                chapter_id=chapter_id,
+                type="false_start",
+                start_ms=200,
+                end_ms=300,
+                confidence=0.8,
+                editor_decision="keep",
+                review_state="reviewed"
+            )
+            session.add(issue2)
+            session.commit()
+            session.refresh(issue2)
+            issue2_id = issue2.id
+
+        resp = client.patch(f"/issues/{issue2_id}", json={"status": "needs_manual"})
+        assert resp.status_code == 200
+        updated = resp.json()
+        assert updated["status"] == "needs_manual"
+        # editor_decision must remain intact - legacy status should not clear it
+        assert updated["editor_decision"] == "keep"
+        # review_state might be "unreviewed" from legacy mapping, which is okay
+        # The key is editor_decision is NOT touched
+    finally:
+        app.dependency_overrides.clear()

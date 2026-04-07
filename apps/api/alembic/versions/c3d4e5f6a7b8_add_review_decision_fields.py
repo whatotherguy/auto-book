@@ -41,11 +41,15 @@ def upgrade() -> None:
     # Update existing issues: migrate legacy status to new fields
     # - approved -> review_state="reviewed" (but don't set editor_decision, let user decide)
     # - rejected -> review_state="reviewed" (but don't set editor_decision)
-    # - needs_manual -> review_state="unreviewed"
+    # - needs_manual/pending -> review_state="unreviewed" (explicit, not just default)
     # Note: We don't automatically set editor_decision because that's user-only now
     connection = op.get_bind()
     connection.execute(
         sa.text("UPDATE issue SET review_state = 'reviewed' WHERE status IN ('approved', 'rejected')")
+    )
+    # Explicitly normalize needs_manual/pending to unreviewed for data cleanliness
+    connection.execute(
+        sa.text("UPDATE issue SET review_state = 'unreviewed' WHERE status IN ('needs_manual', 'pending')")
     )
 
 

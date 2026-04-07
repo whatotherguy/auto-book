@@ -260,14 +260,14 @@ def detect_alt_takes(
         # Adjust for overlapping takes
         playback_windows = adjust_for_overlapping_takes(playback_windows)
 
+        # Build a dict for O(1) lookup of playback windows by issue_index
+        windows_by_index = {w["issue_index"]: w for w in playback_windows}
+
         # Build member list with timing info
         members = []
         for order, (idx, issue, _) in enumerate(sorted_cluster):
-            # Find the corresponding playback window
-            window = next(
-                (w for w in playback_windows if w["issue_index"] == idx),
-                None
-            )
+            # Look up the corresponding playback window (O(1) instead of O(n))
+            window = windows_by_index.get(idx)
 
             member = {
                 "issue_index": idx,

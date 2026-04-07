@@ -1,5 +1,6 @@
 """Tests for take_windows playback window computation."""
 
+import pytest
 from app.services.take_windows import (
     compute_playback_window,
     compute_take_playback_windows,
@@ -42,6 +43,14 @@ class TestFindNearestVadBoundary:
         # Looking for boundary after 1000 - nothing within 200ms
         result = find_nearest_vad_boundary(1000, vad_segments, "after", max_distance_ms=200)
         assert result is None
+
+    def test_invalid_direction_raises_error(self):
+        """Test that invalid direction values raise ValueError."""
+        vad_segments = [{"start_ms": 0, "end_ms": 500}]
+        with pytest.raises(ValueError, match="direction must be 'before' or 'after'"):
+            find_nearest_vad_boundary(100, vad_segments, "invalid")
+        with pytest.raises(ValueError, match="direction must be 'before' or 'after'"):
+            find_nearest_vad_boundary(100, vad_segments, "BEFORE")  # case-sensitive
 
 
 class TestFindEnclosingVadSegment:

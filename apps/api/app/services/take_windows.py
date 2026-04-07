@@ -18,7 +18,7 @@ Playback windows are computed by:
 from __future__ import annotations
 
 import logging
-from typing import Any, Sequence
+from typing import Any, Literal, Sequence
 
 logger = logging.getLogger(__name__)
 
@@ -38,7 +38,7 @@ MIN_PLAYBACK_DURATION_MS = 500
 def find_nearest_vad_boundary(
     target_ms: int,
     vad_segments: Sequence[dict[str, Any]],
-    direction: str,
+    direction: Literal["before", "after"],
     max_distance_ms: int = VAD_SNAP_THRESHOLD_MS,
 ) -> int | None:
     """Find the nearest VAD speech boundary within max_distance_ms.
@@ -46,13 +46,19 @@ def find_nearest_vad_boundary(
     Args:
         target_ms: The target time in milliseconds
         vad_segments: List of VAD segments with start_ms/end_ms
-        direction: "before" to find segment end before target,
-                   "after" to find segment start after target
+        direction: "before" to find boundaries before target (segment starts/ends),
+                   "after" to find boundaries after target (segment starts/ends)
         max_distance_ms: Maximum distance to search for a boundary
 
     Returns:
         The VAD boundary time in ms, or None if no boundary found within range
+
+    Raises:
+        ValueError: If direction is not "before" or "after"
     """
+    if direction not in ("before", "after"):
+        raise ValueError(f"direction must be 'before' or 'after', got {direction!r}")
+
     if not vad_segments:
         return None
 

@@ -203,11 +203,12 @@ def _detect_pickup_candidates(
         
         # TIGHTENED: Silence must be longer for a boost
         if gap_before > PICKUP_CANDIDATE_SILENCE_BOOST_MS:
+            # Long silence (>800ms) gets full 0.10 boost for stronger evidence
             confidence += 0.10
             corroboration_reasons.append("long_silence")
         elif gap_before > 500:
-            # Intermediate silence (500-800ms): give partial boost (0.05)
-            # Long silence (>800ms) gets full 0.10 boost for stronger evidence
+            # Intermediate silence (500-800ms): partial boost (0.05)
+            # Less evidence of intentional pickup than longer silence
             confidence += 0.05
             corroboration_reasons.append("medium_silence")
 

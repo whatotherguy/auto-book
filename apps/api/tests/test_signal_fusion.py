@@ -153,7 +153,7 @@ def test_detect_pickup_candidates_dual_signal_is_primary():
     assert issues[0]["confidence"] >= 0.65
 
 
-def test_detect_pickup_candidates_long_silence_can_become_primary():
+def test_detect_pickup_candidates_accumulated_evidence_still_secondary():
     """Single signal with long silence and onset burst shows accumulating evidence.
     
     Note: With click (0.10) + onset_burst (0.08) + long_silence (0.10) = 0.28 boosts
